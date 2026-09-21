@@ -5,6 +5,7 @@ import {
   type Viewport,
   type Point,
 } from '../../lib/coordinates'
+import { viewportFromKey } from '../../lib/keyboard-viewport'
 import { DotGrid } from './DotGrid'
 
 export type CanvasTool =
@@ -137,6 +138,23 @@ export function CanvasViewport({
     onCanvasPointerUp?.(world, e)
   }
 
+  // Keyboard operation of the canvas (WCAG 2.1.1): arrows pan, +/- zoom,
+  // 0 resets. Zoom is anchored to the centre of the visible canvas.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target !== e.currentTarget) return
+
+    const rect = containerRef.current?.getBoundingClientRect()
+    const focalPoint = rect
+      ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+      : { x: 0, y: 0 }
+
+    const next = viewportFromKey(viewport, e.key, { focalPoint, shiftKey: e.shiftKey })
+    if (!next) return
+
+    e.preventDefault()
+    onViewportChange(next)
+  }
+
   const cursorClass = isPanning
     ? 'cursor-grabbing'
     : isSpacePressed || activeTool === 'pan'
@@ -146,12 +164,18 @@ export function CanvasViewport({
         : 'cursor-default'
 
   return (
+    // The canvas is a scrollable/zoomable region: WCAG 2.1.1 requires it to take
+    // focus and respond to keys, which jsx-a11y cannot express for role="region".
+    // Both disables below are only valid while handleKeyDown stays wired up.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       ref={containerRef}
       role="region"
-      aria-label="Interactive canvas workspace"
+      aria-label="Interactive canvas workspace. Arrow keys pan, plus and minus zoom, zero resets zoom."
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
-      className={`relative w-full h-full overflow-hidden select-none bg-slate-50 ${cursorClass}`}
+      className={`relative w-full h-full overflow-hidden select-none bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500 ${cursorClass}`}
+      onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
