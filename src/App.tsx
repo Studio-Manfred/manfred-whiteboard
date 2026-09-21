@@ -11,28 +11,21 @@ import { TopNav } from './components/UI/TopNav'
 import { ZoomControls } from './components/UI/ZoomControls'
 import { initWhiteboardConnection, getRoomFromUrl, type WhiteboardConnection } from './lib/yjs-provider'
 import type { Viewport, Point } from './lib/coordinates'
+import {
+  createStickyElement,
+  createShapeElement,
+  createDrawingElement,
+  createConnectorElement,
+} from './lib/element-factories'
+import { partitionElements, findElementAt } from './lib/board-selectors'
+import { addElement, patchElement, removeElements } from './lib/board-mutations'
+import { toolForShortcut } from './lib/tool-shortcuts'
+import { generateUser } from './lib/user-identity'
 import type {
   BoardElement,
-  StickyElement,
-  ShapeElement,
-  ConnectorElement,
-  DrawingElement,
   UserAwareness,
   AnchorPosition,
 } from './types/whiteboard'
-import { PASTEL_COLORS } from './types/whiteboard'
-
-// Generate a random user identity for this session
-function generateUser() {
-  const NAMES = ['Alice', 'Bob', 'Charlie', 'Dana', 'Eve', 'Frank', 'Grace', 'Hank']
-  const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316']
-  const idx = Math.floor(Math.random() * NAMES.length)
-  return {
-    id: crypto.randomUUID(),
-    name: NAMES[idx],
-    color: COLORS[idx],
-  }
-}
 
 const localUser = generateUser()
 
@@ -116,19 +109,10 @@ export default function App() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
       const key = e.key.toLowerCase()
-      const toolMap: Record<string, CanvasTool> = {
-        v: 'select',
-        h: 'pan',
-        s: 'sticky',
-        r: 'rectangle',
-        c: 'circle',
-        l: 'connector',
-        p: 'pen',
-        e: 'eraser',
-      }
+      const shortcutTool = toolForShortcut(key)
 
-      if (toolMap[key]) {
-        setActiveTool(toolMap[key])
+      if (shortcutTool) {
+        setActiveTool(shortcutTool)
         return
       }
 
@@ -136,15 +120,7 @@ export default function App() {
       if ((key === 'delete' || key === 'backspace') && selectedIds.size > 0) {
         const conn = connectionRef.current
         if (!conn) return
-        conn.doc.transact(() => {
-          selectedIds.forEach((id) => {
-            conn.elementsMap.delete(id)
-            // Remove from order array
-            const orderArr = conn.elementOrder.toArray()
-            const idx = orderArr.indexOf(id)
-            if (idx !== -1) conn.elementOrder.delete(idx, 1)
-          })
-        })
+        removeElements(conn, selectedIds)
         setSelectedIds(new Set())
       }
 
@@ -169,18 +145,13 @@ export default function App() {
   const updateElement = useCallback((id: string, partial: Partial<BoardElement>) => {
     const conn = connectionRef.current
     if (!conn) return
-    const existing = conn.elementsMap.get(id)
-    if (!existing) return
-    conn.elementsMap.set(id, { ...existing, ...partial, updatedAt: Date.now() } as BoardElement)
+    patchElement(conn, id, partial)
   }, [])
 
   const createElement = useCallback((el: BoardElement) => {
     const conn = connectionRef.current
     if (!conn) return
-    conn.doc.transact(() => {
-      conn.elementsMap.set(el.id, el)
-      conn.elementOrder.push([el.id])
-    })
+    addElement(conn, el)
   }, [])
 
   // ----------- Canvas Pointer Handlers -----------
@@ -194,47 +165,21 @@ export default function App() {
       }
 
       if (activeTool === 'sticky') {
-        const id = crypto.randomUUID()
-        const colorIdx = Math.floor(Math.random() * PASTEL_COLORS.length)
-        const newSticky: StickyElement = {
-          id,
-          type: 'sticky',
-          x: worldPoint.x - 100,
-          y: worldPoint.y - 100,
-          width: 200,
-          height: 200,
-          zIndex: elements.size + 1,
-          text: '',
-          color: PASTEL_COLORS[colorIdx],
-          fontSize: 16,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        createElement(newSticky)
-        setSelectedIds(new Set([id]))
+        const sticky = createStickyElement(worldPoint, { zIndex: elements.size + 1 })
+        createElement(sticky)
+        setSelectedIds(new Set([sticky.id]))
         setActiveTool('select')
         return
       }
 
       if (activeTool === 'rectangle' || activeTool === 'circle') {
-        const id = crypto.randomUUID()
-        const newShape: ShapeElement = {
-          id,
-          type: 'shape',
-          shapeType: activeTool === 'circle' ? 'circle' : 'rectangle',
-          x: worldPoint.x - 60,
-          y: worldPoint.y - 50,
-          width: 120,
-          height: 100,
-          zIndex: elements.size + 1,
-          fillColor: 'transparent',
-          strokeColor: '#0f172a',
-          strokeWidth: 2,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        createElement(newShape)
-        setSelectedIds(new Set([id]))
+        const shape = createShapeElement(
+          worldPoint,
+          activeTool === 'circle' ? 'circle' : 'rectangle',
+          { zIndex: elements.size + 1 }
+        )
+        createElement(shape)
+        setSelectedIds(new Set([shape.id]))
         setActiveTool('select')
         return
       }
@@ -246,25 +191,10 @@ export default function App() {
       }
 
       if (activeTool === 'eraser') {
-        // Find element under cursor and delete it
         const conn = connectionRef.current
         if (!conn) return
-        for (const [id, el] of elements) {
-          if (
-            worldPoint.x >= el.x &&
-            worldPoint.x <= el.x + el.width &&
-            worldPoint.y >= el.y &&
-            worldPoint.y <= el.y + el.height
-          ) {
-            conn.doc.transact(() => {
-              conn.elementsMap.delete(id)
-              const orderArr = conn.elementOrder.toArray()
-              const idx = orderArr.indexOf(id)
-              if (idx !== -1) conn.elementOrder.delete(idx, 1)
-            })
-            break
-          }
-        }
+        const hitId = findElementAt(elements, worldPoint)
+        if (hitId) removeElements(conn, [hitId])
       }
     },
     [activeTool, elements, createElement]
@@ -301,30 +231,7 @@ export default function App() {
       if (activeTool === 'pen' && isDrawing.current) {
         isDrawing.current = false
         if (drawingPoints.length > 2) {
-          const id = crypto.randomUUID()
-          // Compute bounding box
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-          drawingPoints.forEach((p) => {
-            minX = Math.min(minX, p.x)
-            minY = Math.min(minY, p.y)
-            maxX = Math.max(maxX, p.x)
-            maxY = Math.max(maxY, p.y)
-          })
-          const drawing: DrawingElement = {
-            id,
-            type: 'drawing',
-            x: minX,
-            y: minY,
-            width: maxX - minX || 1,
-            height: maxY - minY || 1,
-            zIndex: elements.size + 1,
-            points: drawingPoints,
-            strokeColor: '#0f172a',
-            strokeWidth: 3,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          }
-          createElement(drawing)
+          createElement(createDrawingElement(drawingPoints, { zIndex: elements.size + 1 }))
         }
         setDrawingPoints([])
         return
@@ -340,27 +247,17 @@ export default function App() {
   const handleElementSelect = useCallback((id: string, e: React.PointerEvent | React.MouseEvent) => {
     e.stopPropagation()
     if (activeTool === 'connector' && pendingConnector) {
-      // Complete connector
-      const connectorId = crypto.randomUUID()
-      const connector: ConnectorElement = {
-        id: connectorId,
-        type: 'connector',
-        fromId: pendingConnector.fromId,
-        toId: id,
-        fromAnchor: pendingConnector.fromAnchor,
-        toAnchor: 'left',
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        zIndex: elements.size + 1,
-        strokeColor: '#475569',
-        strokeWidth: 2,
-        style: 'curved',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      }
-      createElement(connector)
+      createElement(
+        createConnectorElement(
+          {
+            fromId: pendingConnector.fromId,
+            fromAnchor: pendingConnector.fromAnchor,
+            toId: id,
+            toAnchor: 'left',
+          },
+          { zIndex: elements.size + 1 }
+        )
+      )
       setPendingConnector(null)
       setActiveTool('select')
       return
@@ -388,27 +285,17 @@ export default function App() {
 
   const handleAnchorClick = useCallback((elementId: string, anchor: AnchorPosition) => {
     if (pendingConnector) {
-      // Complete the connector
-      const connectorId = crypto.randomUUID()
-      const connector: ConnectorElement = {
-        id: connectorId,
-        type: 'connector',
-        fromId: pendingConnector.fromId,
-        toId: elementId,
-        fromAnchor: pendingConnector.fromAnchor,
-        toAnchor: anchor,
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        zIndex: elements.size + 1,
-        strokeColor: '#475569',
-        strokeWidth: 2,
-        style: 'curved',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      }
-      createElement(connector)
+      createElement(
+        createConnectorElement(
+          {
+            fromId: pendingConnector.fromId,
+            fromAnchor: pendingConnector.fromAnchor,
+            toId: elementId,
+            toAnchor: anchor,
+          },
+          { zIndex: elements.size + 1 }
+        )
+      )
       setPendingConnector(null)
     } else {
       setPendingConnector({ fromId: elementId, fromAnchor: anchor })
@@ -417,27 +304,7 @@ export default function App() {
   }, [pendingConnector, elements, createElement])
 
   // ----------- Derived element lists -----------
-  const stickies: StickyElement[] = []
-  const shapes: ShapeElement[] = []
-  const connectors: ConnectorElement[] = []
-  const drawings: DrawingElement[] = []
-
-  elements.forEach((el) => {
-    switch (el.type) {
-      case 'sticky':
-        stickies.push(el as StickyElement)
-        break
-      case 'shape':
-        shapes.push(el as ShapeElement)
-        break
-      case 'connector':
-        connectors.push(el as ConnectorElement)
-        break
-      case 'drawing':
-        drawings.push(el as DrawingElement)
-        break
-    }
-  })
+  const { stickies, shapes, connectors, drawings } = partitionElements(elements)
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-slate-50">
