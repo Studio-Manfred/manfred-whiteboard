@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 4173
 const baseURL = `http://localhost:${PORT}`
+const WS_PORT = 4444
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,10 +18,19 @@ export default defineConfig({
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'chromium-mobile', use: { ...devices['Pixel 5'] } },
   ],
-  webServer: {
-    command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      // Multiplayer specs need the Yjs relay; it answers GET / for the health check.
+      command: `PORT=${WS_PORT} node server/ws-server.mjs`,
+      url: `http://localhost:${WS_PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+  ],
 })

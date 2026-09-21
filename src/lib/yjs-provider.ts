@@ -14,7 +14,12 @@ export interface WhiteboardConnection {
   destroy: () => void
 }
 
-const DEFAULT_WS_URL = 'ws://localhost:1234'
+/**
+ * Default relay endpoint. Must track `server/ws-server.mjs` (PORT 4444) —
+ * they drifted apart once and multiplayer silently never connected.
+ * Override per environment with VITE_WS_URL.
+ */
+const DEFAULT_WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:4444'
 
 /**
  * Derives a clean room name from the URL hash (e.g. #room=sprint-planning), falling back to 'default-room'.
