@@ -59,4 +59,187 @@ describe('StickyNote Component', () => {
 
     expect(handleUpdate).toHaveBeenCalledWith({ text: 'Updated Brainstorm' })
   })
+
+  it('prompts the reader when the note is still empty', () => {
+    render(
+      <StickyNote
+        element={{ ...sampleSticky, text: '' }}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Double-click to write...')).toBeInTheDocument()
+  })
+
+  it('positions itself in world coordinates', () => {
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('sticky-sticky-1')).toHaveStyle({
+      left: '100px',
+      top: '100px',
+      width: '200px',
+      height: '200px',
+    })
+  })
+
+  it('selects and starts a drag on pointer down', () => {
+    const onSelect = vi.fn()
+    const onDragStart = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={onSelect}
+        onUpdate={vi.fn()}
+        onDragStart={onDragStart}
+      />
+    )
+
+    fireEvent.pointerDown(screen.getByTestId('sticky-sticky-1'))
+
+    expect(onSelect).toHaveBeenCalledOnce()
+    expect(onDragStart).toHaveBeenCalledOnce()
+  })
+
+  it('does not drag the note while its text is being edited', () => {
+    const onDragStart = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={true}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={onDragStart}
+      />
+    )
+
+    fireEvent.doubleClick(screen.getByTestId('sticky-sticky-1'))
+    fireEvent.pointerDown(screen.getByTestId('sticky-sticky-1'))
+
+    expect(onDragStart).not.toHaveBeenCalled()
+  })
+
+  it('abandons the edit on Escape without writing back', () => {
+    const handleUpdate = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={true}
+        onSelect={vi.fn()}
+        onUpdate={handleUpdate}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    fireEvent.doubleClick(screen.getByTestId('sticky-sticky-1'))
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Discarded' } })
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' })
+
+    expect(handleUpdate).not.toHaveBeenCalled()
+    expect(screen.getByText('Initial Idea')).toBeInTheDocument()
+  })
+
+  it('does not write back when the text is unchanged', () => {
+    const handleUpdate = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={true}
+        onSelect={vi.fn()}
+        onUpdate={handleUpdate}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    fireEvent.doubleClick(screen.getByTestId('sticky-sticky-1'))
+    fireEvent.blur(screen.getByRole('textbox'))
+
+    expect(handleUpdate).not.toHaveBeenCalled()
+  })
+
+  it('offers a labelled connection anchor on each side', () => {
+    const onAnchorClick = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        onAnchorClick={onAnchorClick}
+      />
+    )
+
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      expect(
+        screen.getByRole('button', { name: `Connect from ${side} anchor` })
+      ).toBeInTheDocument()
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'Connect from bottom anchor' }))
+    expect(onAnchorClick).toHaveBeenCalledWith('bottom', expect.anything())
+  })
+
+  it('shows a resize handle only when selected and resizable', () => {
+    const onResizeStart = vi.fn()
+    const { rerender } = render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        onResizeStart={onResizeStart}
+      />
+    )
+    expect(screen.queryByLabelText('Resize element')).not.toBeInTheDocument()
+
+    rerender(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={true}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        onResizeStart={onResizeStart}
+      />
+    )
+    fireEvent.pointerDown(screen.getByLabelText('Resize element'))
+    expect(onResizeStart).toHaveBeenCalledOnce()
+  })
+
+  it('picks up text changed by another collaborator', () => {
+    const { rerender } = render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    rerender(
+      <StickyNote
+        element={{ ...sampleSticky, text: 'Remote edit' }}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Remote edit')).toBeInTheDocument()
+  })
 })
