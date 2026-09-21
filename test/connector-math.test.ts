@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   getAnchorPosition,
   calculateBezierPath,
-  type AnchorPosition
 } from '../src/lib/connector-math'
 import type { BaseElement } from '../src/types/whiteboard'
 

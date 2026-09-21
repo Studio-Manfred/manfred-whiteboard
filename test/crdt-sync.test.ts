@@ -4,7 +4,6 @@ import {
   createWhiteboardDoc,
   type StickyElement,
   type ShapeElement,
-  type ConnectorElement
 } from '../src/types/whiteboard'
 
 describe('Yjs CRDT Whiteboard State Sync', () => {
