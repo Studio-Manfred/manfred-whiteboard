@@ -36,15 +36,15 @@
 **Interfaces:**
 - Produces: Working React 19 + Vite app that passes `npm run typecheck` and `npm run build`.
 
-- [ ] **Step 1: Write `package.json` with project scripts and dependencies**
+- [x] **Step 1: Write `package.json` with project scripts and dependencies**
   Include `react`, `react-dom`, `yjs`, `y-websocket`, `y-indexeddb`, `lucide-react`, `clsx`, `tailwind-merge`, `@tailwindcss/vite`, `tailwindcss`, `typescript`, `vite`, `vitest`, `@testing-library/react`.
-- [ ] **Step 2: Copy configuration files from `scratch/manfred-bootstrap/starter`**
+- [x] **Step 2: Copy configuration files from `scratch/manfred-bootstrap/starter`**
   Ensure `.npmrc`, `tsconfig*.json`, `vite.config.ts`, `eslint.config.js`, `index.html` are configured.
-- [ ] **Step 3: Run `npm install` with environment token**
+- [x] **Step 3: Run `npm install` with environment token**
   Run: `GITHUB_TOKEN=$(gh auth token) npm install`
-- [ ] **Step 4: Verify build and typecheck**
+- [x] **Step 4: Verify build and typecheck**
   Run: `npm run typecheck && npm run build`
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git add -A && git commit -m "chore: scaffold React 19 + Vite + Tailwind v4 project"`
 
 ---
@@ -62,16 +62,16 @@
   - `zoomAtPoint(currentViewport: Viewport, focalScreenPoint: Point, zoomDelta: number): Viewport`
   - `clampZoom(zoom: number): number`
 
-- [ ] **Step 1: Write failing tests for coordinate math**
+- [x] **Step 1: Write failing tests for coordinate math**
   Cover 1.0x zoom, pan offsets, 2.0x zoom, 0.5x zoom, focal-point zooming, and zoom clamping between 0.1x and 5.0x.
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `npx vitest run test/coordinates.test.ts`
   Expected: FAIL with "cannot find module"
-- [ ] **Step 3: Implement minimal coordinate transformations**
+- [x] **Step 3: Implement minimal coordinate transformations**
   Write pure functions in `src/lib/coordinates.ts`.
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `npx vitest run test/coordinates.test.ts`
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git add -A && git commit -m "feat(math): add coordinate transformations with test coverage"`
 
 ---
@@ -88,15 +88,15 @@
   - Type definitions: `BoardElement`, `StickyElement`, `ShapeElement`, `ConnectorElement`, `DrawingElement`, `Viewport`, `UserAwareness`
   - `initWhiteboardDoc(roomName: string, wsUrl?: string): { doc: Y.Doc, elementsMap: Y.Map<BoardElement>, elementOrder: Y.Array<string>, provider: WebsocketProvider, indexeddbProvider: IndexeddbPersistence, awareness: Awareness }`
 
-- [ ] **Step 1: Write failing CRDT sync tests**
+- [x] **Step 1: Write failing CRDT sync tests**
   Create two `Y.Doc` instances, apply local changes on doc A, exchange update vectors, verify doc B converges to exact state. Test create, update position/text, delete, and z-index reordering.
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `npx vitest run test/crdt-sync.test.ts`
-- [ ] **Step 3: Implement Yjs provider and schema helper**
+- [x] **Step 3: Implement Yjs provider and schema helper**
   Implement in `src/types/whiteboard.ts` and `src/lib/yjs-provider.ts`.
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `npx vitest run test/crdt-sync.test.ts`
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git add -A && git commit -m "feat(crdt): implement Yjs schema and synchronization provider"`
 
 ---
@@ -112,15 +112,15 @@
   - `getAnchorPosition(element: BaseElement, anchor: AnchorPosition): Point`
   - `calculateBezierPath(start: Point, end: Point, fromAnchor: AnchorPosition, toAnchor: AnchorPosition): { pathData: string, angle: number }`
 
-- [ ] **Step 1: Write failing tests for connector geometry**
+- [x] **Step 1: Write failing tests for connector geometry**
   Verify 4 anchor positions for arbitrary rectangles and test cubic Bézier control points + arrow rotation angle.
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `npx vitest run test/connector-math.test.ts`
-- [ ] **Step 3: Implement anchor point and Bézier curve calculation**
+- [x] **Step 3: Implement anchor point and Bézier curve calculation**
   Write pure geometry functions in `src/lib/connector-math.ts`.
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `npx vitest run test/connector-math.test.ts`
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git add -A && git commit -m "feat(geometry): add dynamic connector anchor math with tests"`
 
 ---
@@ -137,15 +137,17 @@
 - Consumes: `coordinates.ts`
 - Produces: Smooth pan (Spacebar/Middle click) and cursor-focal zoom (mouse wheel / trackpad pinch) with dot grid backdrop.
 
-- [ ] **Step 1: Create DotGrid SVG background**
+**Status (2026-09-21):** shipped. Step 4 (manual browser verification) was never recorded as done — the viewport is covered by unit tests and exercised by the E2E specs, but nobody has signed off on it visually.
+
+- [x] **Step 1: Create DotGrid SVG background**
   Render subtle infinite dot pattern shifting with `viewport.x` and `viewport.y`.
-- [ ] **Step 2: Build `CanvasViewport` with pointer event listeners**
+- [x] **Step 2: Build `CanvasViewport` with pointer event listeners**
   Handle spacebar drag, middle mouse drag, wheel zooming, and trackpad pinch.
-- [ ] **Step 3: Build `ZoomControls` floating widget**
+- [x] **Step 3: Build `ZoomControls` floating widget**
   Provide Zoom In, Zoom Out, Zoom to 100%, and Zoom to Fit buttons.
 - [ ] **Step 4: Verify in browser**
   Ensure panning and zooming feels responsive at 60fps.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git add -A && git commit -m "feat(canvas): implement infinite viewport navigation and dot grid"`
 
 ---
@@ -162,15 +164,15 @@
 - Consumes: `BoardElement`, Yjs `elementsMap`
 - Produces: Draggable, selectable, resizable sticky notes with auto-focusing inline textarea and pastel color switching.
 
-- [ ] **Step 1: Implement `StickyNote` component**
+- [x] **Step 1: Implement `StickyNote` component**
   Render note with pastel colors, double-click inline text editing, and 4 anchor indicators.
-- [ ] **Step 2: Implement `ShapeItem` component**
+- [x] **Step 2: Implement `ShapeItem` component**
   Render rectangle and circle SVG/DOM elements with customizable fill/stroke.
-- [ ] **Step 3: Implement selection and drag handling**
+- [x] **Step 3: Implement selection and drag handling**
   Support single-select, multi-select bounding box, drag-to-move, and delete via `Backspace`/`Delete`.
-- [ ] **Step 4: Write component test for StickyNote editing**
+- [x] **Step 4: Write component test for StickyNote editing**
   Run: `npx vitest run test/StickyNote.test.tsx`
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git add -A && git commit -m "feat(elements): implement sticky notes and shapes with inline editing"`
 
 ---
@@ -186,13 +188,13 @@
 - Consumes: `connector-math.ts`, `ConnectorElement`, `DrawingElement`
 - Produces: SVG layer rendering arrows between shapes/notes that stretch dynamically when dragged, and smooth freehand brush strokes.
 
-- [ ] **Step 1: Implement connector drag tool**
+- [x] **Step 1: Implement connector drag tool**
   Clicking an anchor on element A and dragging to element B creates a live connector entry in Yjs.
-- [ ] **Step 2: Implement `ConnectorLayer`**
+- [x] **Step 2: Implement `ConnectorLayer`**
   Renders all connectors with dynamic cubic Bézier paths and SVG arrow markers.
-- [ ] **Step 3: Implement freehand pen tool & `DrawingLayer`**
+- [x] **Step 3: Implement freehand pen tool & `DrawingLayer`**
   Pointer down/move/up records world coordinates and produces smoothed SVG path data.
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add -A && git commit -m "feat(canvas): add dynamic connectors and freehand pen layers"`
 
 ---
@@ -208,13 +210,13 @@
 - Consumes: `y-websocket/awareness`
 - Produces: Throttled live cursor trails with collaborator name tags and colored selection outlines.
 
-- [ ] **Step 1: Wire awareness broadcasting on pointermove**
+- [x] **Step 1: Wire awareness broadcasting on pointermove**
   Convert mouse coordinates to world space, throttle to 30ms, and broadcast via awareness.
-- [ ] **Step 2: Implement `MultiplayerCursors`**
+- [x] **Step 2: Implement `MultiplayerCursors`**
   Render animated SVG/DOM cursors with peer colors and name labels.
-- [ ] **Step 3: Implement `ActiveUsers` top bar list**
+- [x] **Step 3: Implement `ActiveUsers` top bar list**
   Display presence pill badges for all currently connected collaborators.
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add -A && git commit -m "feat(multiplayer): add real-time cursors and presence list"`
 
 ---
@@ -230,13 +232,15 @@
 **Interfaces:**
 - Produces: Miro-style left floating tool dock (Select, Pan, Sticky, Rect, Circle, Connector, Pen, Eraser, Palette), Y.UndoManager integration (`Cmd+Z`, `Cmd+Shift+Z`), and export to PNG / JSON.
 
-- [ ] **Step 1: Implement glassmorphic `Toolbar`**
+**Status (2026-09-21):** partially shipped. The toolbar ships without the colour picker / palette tool the plan lists, undo/redo is keyboard-only (`Cmd+Z`, `Cmd+Shift+Z`) with no buttons, and **step 3 is not started** — `src/lib/export.ts` does not exist, so there is no PNG or JSON export.
+
+- [x] **Step 1: Implement glassmorphic `Toolbar`**
   Tool selection shortcuts (`V`, `H`, `S`, `R`, `O`, `C`, `P`, `E`), color picker, and active tool indicators.
-- [ ] **Step 2: Wire `Y.UndoManager`**
+- [x] **Step 2: Wire `Y.UndoManager`**
   Enable undo/redo buttons and keyboard shortcuts.
 - [ ] **Step 3: Implement board export (PNG & JSON)**
   Export board content as clean SVG/PNG image download or JSON backup.
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add -A && git commit -m "feat(ui): add floating toolbar, top navigation, undo/redo, and export"`
 
 ---
@@ -250,13 +254,13 @@
 **Interfaces:**
 - Produces: Standalone WebSocket server script and end-to-end automated multi-client sync test.
 
-- [ ] **Step 1: Create lightweight WebSocket server**
+- [x] **Step 1: Create lightweight WebSocket server**
   Using `y-websocket/bin/utils` or native `ws`. Add script `"server": "node server/ws-server.mjs"`.
-- [ ] **Step 2: Write Playwright E2E multi-tab test**
+- [x] **Step 2: Write Playwright E2E multi-tab test**
   Open two browser contexts on `http://localhost:5173/#room=e2e-test`, create a sticky note in Tab 1, assert it appears in Tab 2 with cursor movement.
-- [ ] **Step 3: Run E2E test**
+- [x] **Step 3: Run E2E test**
   Run: `npm run test:e2e`
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add -A && git commit -m "test(e2e): add multiplayer sync verification with Playwright"`
 
 ---
@@ -267,7 +271,9 @@
 - Modify: `vercel.json`
 - Modify: `README.md`
 
-- [ ] **Step 1: Configure `vercel.json` for client-side routing & build output**
+**Status (2026-09-21):** only step 1 done — `vercel.json` rewrites all routes to `index.html`. There is no git remote, no GitHub repository and no linked Vercel project. Note the deployed app has no relay: `server/ws-server.mjs` is a local dev server, so hosted multiplayer needs a relay host and `VITE_WS_URL` set.
+
+- [x] **Step 1: Configure `vercel.json` for client-side routing & build output**
 - [ ] **Step 2: Create GitHub repository under Studio-Manfred or user account**
   Run: `gh repo create manfred-whiteboard --source=. --remote=origin --push --private`
 - [ ] **Step 3: Link Vercel project**
