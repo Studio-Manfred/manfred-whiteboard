@@ -10,7 +10,7 @@ import { Toolbar } from './components/UI/Toolbar'
 import { TopNav } from './components/UI/TopNav'
 import { ZoomControls } from './components/UI/ZoomControls'
 import { initWhiteboardConnection, getRoomFromUrl, type WhiteboardConnection } from './lib/yjs-provider'
-import type { Viewport, Point } from './lib/coordinates'
+import { screenToWorld, type Viewport, type Point } from './lib/coordinates'
 import {
   createStickyElement,
   createShapeElement,
@@ -271,6 +271,12 @@ export default function App() {
     }
   }, [activeTool, pendingConnector, elements, createElement])
 
+  /** Where a pointer event sits in board coordinates. */
+  const pointerWorld = useCallback(
+    (e: React.PointerEvent) => screenToWorld({ x: e.clientX, y: e.clientY }, viewport),
+    [viewport]
+  )
+
   const handleDragStart = useCallback((id: string, worldPoint: Point, e: React.PointerEvent) => {
     e.stopPropagation()
     const el = elements.get(id)
@@ -344,10 +350,7 @@ export default function App() {
             isSelected={selectedIds.has(shape.id)}
             onSelect={(e) => handleElementSelect(shape.id, e)}
             onUpdate={(partial) => updateElement(shape.id, partial)}
-            onDragStart={(e) => {
-              const world = { x: shape.x, y: shape.y }
-              handleDragStart(shape.id, world, e)
-            }}
+            onDragStart={(e) => handleDragStart(shape.id, pointerWorld(e), e)}
             onAnchorClick={(anchor) => handleAnchorClick(shape.id, anchor)}
           />
         ))}
@@ -360,10 +363,7 @@ export default function App() {
             isSelected={selectedIds.has(sticky.id)}
             onSelect={(e) => handleElementSelect(sticky.id, e)}
             onUpdate={(partial) => updateElement(sticky.id, partial)}
-            onDragStart={(e) => {
-              const world = { x: sticky.x, y: sticky.y }
-              handleDragStart(sticky.id, world, e)
-            }}
+            onDragStart={(e) => handleDragStart(sticky.id, pointerWorld(e), e)}
             onAnchorClick={(anchor) => handleAnchorClick(sticky.id, anchor)}
           />
         ))}
