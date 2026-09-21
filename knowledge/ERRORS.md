@@ -60,3 +60,35 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
 - **Graduated to:** not yet — watch for a second instance of "silently degrades to
   local-only" before promoting to `my-process/docs/knowledge/`.
 
+---
+
+## 2026-09-21 — jsdom has no PointerEvent, so pointer coordinates arrive as NaN
+
+- **Symptom:** a component test firing `fireEvent.pointerDown(el, { clientX: 300,
+  clientY: 150 })` saw the handler receive `{ x: NaN, y: NaN }`.
+- **Cause:** jsdom does not implement `PointerEvent`. Testing Library falls back to a
+  plain `Event`, which carries no `clientX`/`clientY`, so the coordinates are silently
+  dropped rather than erroring.
+- **Fix / conclusion:** polyfill `PointerEvent` as a subclass of `MouseEvent` in
+  `test/setup.ts`. The wider trap: tests that only assert "the handler was called" pass
+  happily under this bug — assert on the *values* a pointer handler receives, or the
+  test proves nothing about position.
+- **Graduated to:** candidate for `my-process/docs/knowledge/` — this will recur in any
+  project on this stack that tests pointer interactions.
+
+---
+
+## 2026-09-21 — coverage ratchet failed on a baseline the repo had outgrown
+
+- **Symptom:** `npm run coverage:check` failed at 22.5% statements against a 52.17%
+  baseline, with no single change responsible.
+- **Cause:** the baseline was recorded when the repo was almost all `lib` code. A large
+  batch of view code then landed untested, and because the coverage config includes all
+  of `src/**` whether imported or not, the percentage fell even though nothing regressed.
+- **Fix / conclusion:** the answer was not to lower the gate. Extracting logic out of the
+  page into `lib/` helpers and covering the component layer took statements to 97.73%,
+  and the baseline was then raised. A ratchet measured as a *percentage* drifts whenever
+  the shape of the codebase changes — treat a sudden drop as a question about what
+  landed untested, not as a broken gate.
+- **Graduated to:** not yet.
+

@@ -29,13 +29,17 @@ half-done, and the next pickup point. Convert relative dates to absolute.
   - Pure logic (`stroke-path`, `keyboard-viewport`) pulled into `src/lib` so it is
     testable without rendering, per the "extract a helper" tactic.
   - Axe ratchet promoted: CI now runs the sweep with `AXE_ENFORCE=1`.
-- **Next pickup:** the **coverage ratchet is red** — `npm run coverage:check` reports
-  statements 22.5% against a 52.17% baseline (also functions 63.88% vs 66.66%). It was
-  already red before this session: the baseline was set when the repo was almost all
-  `lib` code, and the UI batch added ~1,100 untested view statements. 410 more covered
-  statements reach the baseline; `src/App.tsx` alone holds 416 uncovered. Decide between
-  writing component tests for the layer files (CanvasViewport 135, ShapeItem 122,
-  ConnectorLayer 76, ZoomControls 70, DrawingLayer 62, yjs-provider 49, and the small
-  ones), extracting App.tsx logic into tested helpers, or re-baselining deliberately.
-  After that: plan task 11 (GitHub remote + Vercel), and file the Linear tickets.
+- **Coverage, resolved:** all three options were taken. Logic extracted from `App.tsx`
+  into five tested `lib` modules (514 to 381 lines), the whole component layer covered,
+  and the baseline then raised to 97.73%/89.75%/91.95%. 193 unit tests, 8 E2E.
+- **Bugs the new tests caught:** dragging teleported an element's corner to the cursor
+  (drag origin was the element position, not the pointer's); and `fireEvent.pointer*` in
+  jsdom was dropping coordinates entirely for want of a `PointerEvent` polyfill, so
+  pointer assertions had been meaningless.
+- **Next pickup:** plan task 11 — no git remote, no GitHub repo, no Vercel link — and
+  note a deployed build has no relay (`ws-server.mjs` is dev-only; hosted multiplayer
+  needs a relay host and `VITE_WS_URL`). Then the task 9 gaps: PNG/JSON export,
+  toolbar colour picker, undo/redo buttons. `SelectionOverlay` is written and tested
+  but never rendered by App — wire up marquee selection or delete it. Linear tickets
+  still need filing.
 
