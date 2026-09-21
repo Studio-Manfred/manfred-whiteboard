@@ -22,7 +22,7 @@ export function TopNav({ roomName, users, localUserId }: TopNavProps) {
           </span>
         </div>
         <div className="w-px h-5 bg-slate-200" />
-        <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+        <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
           {roomName}
         </span>
       </div>

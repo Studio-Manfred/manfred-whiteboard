@@ -48,7 +48,8 @@ jobs:
     needs: verify
     timeout-minutes: 15
     env:
-      AXE_ENFORCE: "0"
+      # Ratchet: the axe sweep is clean, so violations now block the merge.
+      AXE_ENFORCE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
