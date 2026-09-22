@@ -60,6 +60,20 @@ half-done, and the next pickup point. Convert relative dates to absolute.
   picker, STU-856 undo/redo controls, STU-857 marquee selection, STU-859 token scope.
   Note the team key is **STU**, not the `MWB` these docs used to claim — corrected in
   CLAUDE.md and AGENTS.md.
+- **Four feature PRs open (2026-09-22), stacked.** #1 STU-856 undo/redo buttons → #2
+  STU-855 colour picker → #3 STU-857 marquee multi-select → #4 STU-854 board export.
+  Each branches off the one before, so **merge in order 1→2→3→4**; GitHub retargets each
+  to `main` as the one below lands.
+- **CI does not run on stacked PRs.** `.github/workflows/ci.yml` filters
+  `pull_request: branches: [main]`, which matches the *base* branch — so #2–#4 only got
+  Vercel checks. They pick up CI the moment they retarget to `main`. Everything was
+  verified locally: 322 unit tests, 12 E2E, coverage 98.37%.
+- **Decisions made with the user:** undo/redo live in the top bar (keeps the toolbar a
+  pure tool picker); marquee selects anything it clips, not just what it fully contains;
+  branch-and-PR per ticket.
+- **Worth remembering:** screenshots of the real preview build caught two bugs unit tests
+  could not — the palette claiming a colour a transparent shape was not wearing, and the
+  PNG export missing the arrowhead the board draws. Keep eyeballing exports and popovers.
 - **Next pickup:** UX/UI and features — STU-855, STU-856 and STU-857 are the ones that
   change how the board feels to use; STU-854 is the last piece of the original plan (`ws-server.mjs` is dev-only; hosted multiplayer
   needs a relay host and `VITE_WS_URL`). Then the task 9 gaps: PNG/JSON export,
