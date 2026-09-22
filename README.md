@@ -26,8 +26,9 @@ Open the app twice in separate windows to see it sync. Boards are addressed by U
 hash: `http://localhost:5173/#room=sprint-planning`. Without a `room` parameter you
 land on `default-room`.
 
-`VITE_WS_URL` overrides the relay endpoint (default `ws://localhost:4444`, which must
-match the port `server/ws-server.mjs` listens on).
+`VITE_WS_URL` overrides the relay endpoint. In development it defaults to
+`ws://localhost:4444`, which must match the port `server/ws-server.mjs` listens on; a
+built app with no `VITE_WS_URL` runs local-only (see [Deployment](#deployment)).
 
 ## Commands
 
@@ -93,9 +94,16 @@ the private `@studio-manfred/manfred-design-system` package:
 Preview deployments sit behind Vercel Deployment Protection, so automated checks need
 `vercel curl <url>` rather than plain `curl`, which only sees the SSO redirect.
 
-**The deployed app is single-player.** `server/ws-server.mjs` is a local dev relay, so a
-hosted build has nothing to connect to and every browser keeps its own IndexedDB copy of
-the board. Hosted multiplayer needs a relay host plus `VITE_WS_URL` pointing at it.
+**A built app is local-only unless you configure a relay.** `VITE_WS_URL` is the switch:
+
+- **Set** (e.g. `wss://relay.example.com`) — the board syncs through that relay.
+- **Unset** — no websocket is opened at all and each browser keeps its own IndexedDB
+  copy of the board. The localhost fallback is development-only on purpose: in a
+  deployed app it would point every visitor's browser at port 4444 on *their own
+  machine* and retry forever.
+
+`server/ws-server.mjs` is a local dev relay, so hosted multiplayer needs a relay host
+plus `VITE_WS_URL` pointing at it. The E2E suite sets it explicitly for the same reason.
 
 ## Testing
 

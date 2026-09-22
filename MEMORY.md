@@ -48,6 +48,11 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 - **Still declared, still unused:** `@studio-manfred/manfred-design-system` is in
   `package.json` but imported by no file. Kept deliberately (user's call), at the cost
   of a credential in the Vercel env and a public repo outsiders cannot install.
+- **Production hardening (2026-09-22):** a built app no longer falls back to the
+  localhost relay — `resolveWsUrl` returns null in a production build with no
+  `VITE_WS_URL`, so the deployed board is deliberately local-only instead of hammering
+  each visitor's own port 4444. Playwright's preview build now sets `VITE_WS_URL`
+  explicitly, which is what keeps the multiplayer specs meaningful.
 - **Next pickup:** host a relay and set `VITE_WS_URL` — the deployed board is
   single-player until then (`ws-server.mjs` is dev-only; hosted multiplayer
   needs a relay host and `VITE_WS_URL`). Then the task 9 gaps: PNG/JSON export,

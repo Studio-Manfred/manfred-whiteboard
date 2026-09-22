@@ -48,3 +48,7 @@ All notable changes to this project are documented here. The format follows
   the drag delta, because the drag origin was the element's position rather than the
   pointer's.
 - Room name chip failed WCAG AA contrast (4.34:1 against the 4.5:1 required at 12px).
+- A deployed build with no `VITE_WS_URL` fell back to `ws://localhost:4444`, so every
+  visitor's browser tried to reach port 4444 on their own machine and retried forever.
+  The localhost fallback is now development-only; a built app with no relay configured
+  opens no socket at all and runs local-only.

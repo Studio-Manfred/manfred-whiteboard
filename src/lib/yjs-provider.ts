@@ -15,11 +15,26 @@ export interface WhiteboardConnection {
 }
 
 /**
- * Default relay endpoint. Must track `server/ws-server.mjs` (PORT 4444) —
- * they drifted apart once and multiplayer silently never connected.
- * Override per environment with VITE_WS_URL.
+ * Local relay endpoint. Must track `server/ws-server.mjs` (PORT 4444) — they
+ * drifted apart once and multiplayer silently never connected.
  */
-const DEFAULT_WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:4444'
+export const DEV_WS_URL = 'ws://localhost:4444'
+
+/**
+ * Which relay to talk to, or `null` for a local-only board.
+ *
+ * A built app with no `VITE_WS_URL` has no relay to reach: falling back to
+ * localhost there would point every visitor's browser at port 4444 on *their
+ * own machine* and retry forever. So the fallback is development-only, and a
+ * deployment without a configured relay simply runs local-only.
+ */
+export function resolveWsUrl(
+  configured: string | undefined = import.meta.env.VITE_WS_URL,
+  isDev: boolean = import.meta.env.DEV
+): string | null {
+  if (configured?.trim()) return configured
+  return isDev ? DEV_WS_URL : null
+}
 
 /**
  * Derives a clean room name from the URL hash (e.g. #room=sprint-planning), falling back to 'default-room'.
@@ -36,7 +51,7 @@ export function getRoomFromUrl(): string {
  */
 export function initWhiteboardConnection(
   roomName: string = getRoomFromUrl(),
-  wsUrl: string = DEFAULT_WS_URL,
+  wsUrl: string | null = resolveWsUrl(),
   enableRemote: boolean = true
 ): WhiteboardConnection {
   const { doc, elementsMap, elementOrder } = createWhiteboardDoc()
@@ -50,7 +65,7 @@ export function initWhiteboardConnection(
   let wsProvider: WebsocketProvider | null = null
   let awareness: WebsocketProvider['awareness'] | null = null
 
-  if (enableRemote && typeof window !== 'undefined') {
+  if (enableRemote && wsUrl && typeof window !== 'undefined') {
     try {
       wsProvider = new WebsocketProvider(wsUrl, roomName, doc)
       awareness = wsProvider.awareness

@@ -1,5 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { getRoomFromUrl, initWhiteboardConnection } from '../src/lib/yjs-provider'
+import {
+  getRoomFromUrl,
+  initWhiteboardConnection,
+  resolveWsUrl,
+  DEV_WS_URL,
+} from '../src/lib/yjs-provider'
 
 const connections: Array<{ destroy: () => void }> = []
 
@@ -86,3 +91,47 @@ describe('initWhiteboardConnection', () => {
     expect(() => conn.destroy()).not.toThrow()
   })
 })
+
+describe('resolveWsUrl', () => {
+  it('uses the configured endpoint, in development or production', () => {
+    expect(resolveWsUrl('wss://relay.example.com', true)).toBe('wss://relay.example.com')
+    expect(resolveWsUrl('wss://relay.example.com', false)).toBe('wss://relay.example.com')
+  })
+
+  it('falls back to the local relay while developing', () => {
+    expect(resolveWsUrl(undefined, true)).toBe(DEV_WS_URL)
+  })
+
+  it('returns null in a built app with no endpoint configured', () => {
+    // Otherwise every visitor's browser hammers ws://localhost on their own machine.
+    expect(resolveWsUrl(undefined, false)).toBeNull()
+  })
+
+  it('treats an empty or blank VITE_WS_URL as unset', () => {
+    expect(resolveWsUrl('', false)).toBeNull()
+    expect(resolveWsUrl('   ', false)).toBeNull()
+  })
+})
+
+describe('initWhiteboardConnection without an endpoint', () => {
+  it('never opens a socket when there is nothing to connect to', () => {
+    const conn = initWhiteboardConnection('lonely-room', null)
+    connections.push(conn)
+
+    expect(conn.wsProvider).toBeNull()
+    expect(conn.awareness).toBeNull()
+  })
+
+  it('still gives a fully usable local board', () => {
+    const conn = initWhiteboardConnection('lonely-room', null)
+    connections.push(conn)
+
+    conn.doc.transact(() => {
+      conn.elementOrder.push(['a'])
+    })
+
+    expect(conn.elementOrder.toArray()).toEqual(['a'])
+    expect(() => conn.undoManager.undo()).not.toThrow()
+  })
+})
+

@@ -24,6 +24,9 @@ export default defineConfig({
       url: baseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      // A production build only talks to a relay when one is configured, so the
+      // multiplayer specs must point the build at the relay started below.
+      env: { VITE_WS_URL: `ws://localhost:${WS_PORT}` },
     },
     {
       // Multiplayer specs need the Yjs relay; it answers GET / for the health check.
