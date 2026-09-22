@@ -13,6 +13,7 @@ export function SelectionOverlay({ start, current }: SelectionOverlayProps) {
 
   return (
     <div
+      data-testid="selection-marquee"
       className="absolute border border-blue-500 bg-blue-500/10 pointer-events-none z-50 rounded-xs"
       style={{
         left: `${left}px`,

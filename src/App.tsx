@@ -6,6 +6,7 @@ import { ShapeItem } from './components/Canvas/ShapeItem'
 import { ConnectorLayer } from './components/Canvas/ConnectorLayer'
 import { DrawingLayer } from './components/Canvas/DrawingLayer'
 import { MultiplayerCursors } from './components/Canvas/MultiplayerCursors'
+import { SelectionOverlay } from './components/Canvas/SelectionOverlay'
 
 import { Toolbar } from './components/UI/Toolbar'
 import { TopNav } from './components/UI/TopNav'
@@ -19,6 +20,7 @@ import {
   createConnectorElement,
 } from './lib/element-factories'
 import { partitionElements, findElementAt } from './lib/board-selectors'
+import { elementsInMarquee, rectFromPoints } from './lib/marquee'
 import {
   colorPatchFor,
   currentFillOf,
@@ -57,11 +59,13 @@ export default function App() {
 
   // Drag state
   const dragState = useRef<{
-    elementId: string
     startWorld: Point
-    startX: number
-    startY: number
+    /** Where each dragged element started, so a group keeps its shape. */
+    origins: Map<string, Point>
   } | null>(null)
+
+  /** Rubber-band selection in world coordinates; null when not dragging one. */
+  const [marquee, setMarquee] = useState<{ start: Point; current: Point } | null>(null)
 
   const connectionRef = useRef<WhiteboardConnection | null>(null)
   const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null)
@@ -171,10 +175,12 @@ export default function App() {
   // ----------- Canvas Pointer Handlers -----------
   const handleCanvasPointerDown = useCallback(
     (worldPoint: Point) => {
-      // Clicking empty canvas deselects
+      // Empty canvas: start a rubber-band selection. A click with no drag ends
+      // up as a zero-size marquee, which selects nothing — i.e. deselects.
       if (activeTool === 'select') {
         setSelectedIds(new Set())
         setPendingConnector(null)
+        setMarquee({ start: worldPoint, current: worldPoint })
         return
       }
 
@@ -231,15 +237,32 @@ export default function App() {
         return
       }
 
-      // Drag move
+      // Rubber-band selection, updated live so the user sees what they will get
+      if (marquee) {
+        setMarquee({ start: marquee.start, current: worldPoint })
+        const rect = rectFromPoints(marquee.start, worldPoint)
+        setSelectedIds(new Set(elementsInMarquee(elements, rect)))
+        return
+      }
+
+      // Drag move — every selected element travels together
       if (dragState.current) {
-        const { elementId, startWorld, startX, startY } = dragState.current
+        const { startWorld, origins } = dragState.current
         const dx = worldPoint.x - startWorld.x
         const dy = worldPoint.y - startWorld.y
-        updateElement(elementId, { x: startX + dx, y: startY + dy })
+
+        const conn = connectionRef.current
+        if (!conn) return
+
+        // One transaction so a group move is a single undo step.
+        conn.doc.transact(() => {
+          origins.forEach((origin, id) => {
+            patchElement(conn, id, { x: origin.x + dx, y: origin.y + dy })
+          })
+        })
       }
     },
-    [activeTool, updateElement]
+    [activeTool, marquee, elements]
   )
 
   const handleCanvasPointerUp = useCallback(
@@ -254,10 +277,16 @@ export default function App() {
         return
       }
 
+      // Finish the rubber band; the selection it produced stays put.
+      if (marquee) {
+        setMarquee(null)
+        return
+      }
+
       // Finish drag
       dragState.current = null
     },
-    [activeTool, drawingPoints, elements, createElement]
+    [activeTool, drawingPoints, elements, createElement, marquee]
   )
 
   // ----------- Element event handlers -----------
@@ -280,12 +309,16 @@ export default function App() {
       return
     }
 
-    setSelectedIds(new Set([id]))
-    // Broadcast selection awareness
-    const conn = connectionRef.current
-    if (conn?.awareness) {
-      conn.awareness.setLocalStateField('selection', [id])
-    }
+    const additive = 'shiftKey' in e && e.shiftKey
+    setSelectedIds((previous) => {
+      if (!additive) return new Set([id])
+
+      const next = new Set(previous)
+      // Shift on an already-selected element takes it back out again.
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }, [activeTool, pendingConnector, elements, createElement])
 
   /** Where a pointer event sits in board coordinates. */
@@ -294,17 +327,25 @@ export default function App() {
     [viewport]
   )
 
-  const handleDragStart = useCallback((id: string, worldPoint: Point, e: React.PointerEvent) => {
-    e.stopPropagation()
-    const el = elements.get(id)
-    if (!el) return
-    dragState.current = {
-      elementId: id,
-      startWorld: worldPoint,
-      startX: el.x,
-      startY: el.y,
-    }
-  }, [elements])
+  const handleDragStart = useCallback(
+    (id: string, worldPoint: Point, e: React.PointerEvent) => {
+      e.stopPropagation()
+      const el = elements.get(id)
+      if (!el) return
+
+      // Dragging a member of a selection moves the whole selection; dragging
+      // anything else moves just that element.
+      const group = selectedIds.has(id) ? selectedIds : new Set([id])
+      const origins = new Map<string, Point>()
+      group.forEach((memberId) => {
+        const member = elements.get(memberId)
+        if (member) origins.set(memberId, { x: member.x, y: member.y })
+      })
+
+      dragState.current = { startWorld: worldPoint, origins }
+    },
+    [elements, selectedIds]
+  )
 
   const handleAnchorClick = useCallback((elementId: string, anchor: AnchorPosition) => {
     if (pendingConnector) {
@@ -325,6 +366,11 @@ export default function App() {
       setActiveTool('connector')
     }
   }, [pendingConnector, elements, createElement])
+
+  // Presence shows everything the user has selected, not just the last click.
+  useEffect(() => {
+    connectionRef.current?.awareness?.setLocalStateField('selection', Array.from(selectedIds))
+  }, [selectedIds])
 
   // ----------- Colour -----------
   const selectedElements = Array.from(selectedIds)
@@ -427,6 +473,9 @@ export default function App() {
             onAnchorClick={(anchor) => handleAnchorClick(sticky.id, anchor)}
           />
         ))}
+
+        {/* Rubber-band selection */}
+        {marquee && <SelectionOverlay start={marquee.start} current={marquee.current} />}
 
         {/* Multiplayer cursors */}
         <MultiplayerCursors remoteUsers={remoteUsers} />
