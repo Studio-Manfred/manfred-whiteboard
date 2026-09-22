@@ -26,16 +26,17 @@ flat config with `jsx-a11y`. Hosted on Vercel.
 | `AXE_ENFORCE=1 npm run test:e2e` | make the axe sweep merge-blocking |
 
 ## The per-PR rhythm
-1. A Linear ticket exists first (`MWB-NNN`) — file one if needed. The ticket exists before the branch.
-2. Branch off `main`: `feat/MWB-NNN-short-description`.
+1. A Linear ticket exists first (`STU-NNN`, Studio Manfred team, **Manfred Whiteboard**
+   project) — file one if needed. The ticket exists before the branch.
+2. Branch off `main`: `feat/STU-NNN-short-description`.
 3. Write the failing test first (when the TDD trigger list applies).
 4. Implement until green locally.
 5. Update docs in the SAME PR (`CLAUDE.md` / `README.md` / `CHANGELOG.md` / `MEMORY.md` / `knowledge/ERRORS.md`).
    Changelog discipline: merge new entries into the **existing** `### Added/Changed/Fixed`
    heading under `[Unreleased]` — never prepend a new heading block (repeated prepends
    silently create duplicate headings).
-6. Conventional commit naming the ticket: `feat(scope): summary (MWB-NNN)`.
-7. Open a PR with the template filled in, including `Closes MWB-NNN`.
+6. Conventional commit naming the ticket: `feat(scope): summary (STU-NNN)`.
+7. Open a PR with the template filled in, including `Closes STU-NNN`.
 8. Wait for CI; iterate on red checks.
 9. Squash-merge when green; the ticket auto-closes; pull `main`.
 

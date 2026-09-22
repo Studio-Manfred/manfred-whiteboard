@@ -271,7 +271,12 @@
 - Modify: `vercel.json`
 - Modify: `README.md`
 
-**Status (2026-09-21):** only step 1 done — `vercel.json` rewrites all routes to `index.html`. There is no git remote, no GitHub repository and no linked Vercel project. Note the deployed app has no relay: `server/ws-server.mjs` is a local dev server, so hosted multiplayer needs a relay host and `VITE_WS_URL` set.
+**Status (2026-09-22):** shipped except hosted multiplayer. The repo is public at
+Studio-Manfred/manfred-whiteboard with CI green, and production is live at
+manfred-whiteboard.vercel.app. **The relay is parked** — tracked as STU-853; the
+deployed board is deliberately local-only until it lands.
+
+Previous status (2026-09-21): only step 1 done — `vercel.json` rewrites all routes to `index.html`. There is no git remote, no GitHub repository and no linked Vercel project. Note the deployed app has no relay: `server/ws-server.mjs` is a local dev server, so hosted multiplayer needs a relay host and `VITE_WS_URL` set.
 
 - [x] **Step 1: Configure `vercel.json` for client-side routing & build output**
 - [ ] **Step 2: Create GitHub repository under Studio-Manfred or user account**

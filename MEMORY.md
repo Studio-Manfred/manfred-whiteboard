@@ -53,8 +53,15 @@ half-done, and the next pickup point. Convert relative dates to absolute.
   `VITE_WS_URL`, so the deployed board is deliberately local-only instead of hammering
   each visitor's own port 4444. Playwright's preview build now sets `VITE_WS_URL`
   explicitly, which is what keeps the multiplayer specs meaningful.
-- **Next pickup:** host a relay and set `VITE_WS_URL` — the deployed board is
-  single-player until then (`ws-server.mjs` is dev-only; hosted multiplayer
+- **Relay parked (2026-09-22), by decision.** The deployed board stays local-only for
+  now; the work is captured in Linear rather than carried as a loose end.
+- **Linear caught up:** project **Manfred Whiteboard** (P-STU-21) with the shipped work
+  written up, plus STU-853 relay (parked, Backlog), STU-854 export, STU-855 colour
+  picker, STU-856 undo/redo controls, STU-857 marquee selection, STU-859 token scope.
+  Note the team key is **STU**, not the `MWB` these docs used to claim — corrected in
+  CLAUDE.md and AGENTS.md.
+- **Next pickup:** UX/UI and features — STU-855, STU-856 and STU-857 are the ones that
+  change how the board feels to use; STU-854 is the last piece of the original plan (`ws-server.mjs` is dev-only; hosted multiplayer
   needs a relay host and `VITE_WS_URL`). Then the task 9 gaps: PNG/JSON export,
   toolbar colour picker, undo/redo buttons. `SelectionOverlay` is written and tested
   but never rendered by App — wire up marquee selection or delete it. Linear tickets

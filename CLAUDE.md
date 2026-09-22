@@ -10,8 +10,12 @@ specific to **manfred-whiteboard**.
 
 
 ## Linear
-- Team prefix: `MWB` (tickets are `MWB-NNN`).
-- The ticket exists before the branch. Branch: `feat/MWB-NNN-short-desc`.
+- Team **Studio Manfred**, prefix `STU` (tickets are `STU-NNN`). There is no `MWB` team —
+  earlier drafts of this file assumed one, and the first 21 commits landed with no ticket
+  refs as a result.
+- Work lives in the **Manfred Whiteboard** project:
+  https://linear.app/studio-manfred/project/manfred-whiteboard-a2565bc4d491
+- The ticket exists before the branch. Branch: `feat/STU-NNN-short-desc`.
 
 ## Project-specific conventions
 <!-- Fill in as the project grows: data layer, routing, page layout, sharp edges. -->

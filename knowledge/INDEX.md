@@ -22,6 +22,13 @@ base at `my-process/docs/knowledge/`.
 ### Audit & status
 <!-- Read-only audits, prioritised findings, remediation order. -->
 
+### Reference
+<!-- Pointers to external sources of truth. -->
+- Linear project **Manfred Whiteboard** (team `STU`) —
+  https://linear.app/studio-manfred/project/manfred-whiteboard-a2565bc4d491
+- Repo: https://github.com/Studio-Manfred/manfred-whiteboard · Production:
+  https://manfred-whiteboard.vercel.app
+
 ### Plans & Specs
 <!-- Decomposition plans for larger pieces of work. -->
 - [docs/superpowers/specs/2026-09-17-collaborative-whiteboard-design.md](../docs/superpowers/specs/2026-09-17-collaborative-whiteboard-design.md) — Collaborative Whiteboard Design Spec.
