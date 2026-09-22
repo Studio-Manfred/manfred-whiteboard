@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import type { StickyElement, AnchorPosition } from '../../types/whiteboard'
+import { ResizeHandles } from './ResizeHandles'
+import type { ResizeHandle } from '../../lib/resize'
+import type { Point } from '../../lib/coordinates'
 
 interface StickyNoteProps {
   element: StickyElement
@@ -8,7 +11,8 @@ interface StickyNoteProps {
   onUpdate: (updated: Partial<StickyElement>) => void
   onDragStart: (e: React.PointerEvent) => void
   onAnchorClick?: (anchor: AnchorPosition, e: React.MouseEvent) => void
-  onResizeStart?: (e: React.PointerEvent) => void
+  onResizeStart?: (handle: ResizeHandle, e: React.PointerEvent) => void
+  onResizeByKeyboard?: (handle: ResizeHandle, delta: Point) => void
 }
 
 export function StickyNote({
@@ -19,6 +23,7 @@ export function StickyNote({
   onDragStart,
   onAnchorClick,
   onResizeStart,
+  onResizeByKeyboard,
 }: StickyNoteProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [text, setText] = useState(element.text)
@@ -122,15 +127,11 @@ export function StickyNote({
         )
       })}
 
-      {/* Resize Handle */}
-      {isSelected && onResizeStart && (
-        <div
-          aria-label="Resize element"
-          className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-blue-600 rounded-sm cursor-nwse-resize z-40 shadow-sm"
-          onPointerDown={(e) => {
-            e.stopPropagation()
-            onResizeStart(e)
-          }}
+      {/* Resize handles: corners and edges */}
+      {isSelected && onResizeStart && onResizeByKeyboard && (
+        <ResizeHandles
+          onResizeStart={onResizeStart}
+          onResizeByKeyboard={onResizeByKeyboard}
         />
       )}
     </div>

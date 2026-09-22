@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Resize sticky notes and shapes by dragging any of eight handles — four corners and
+  four edges — with shift to preserve proportions, a minimum size, and full arrow-key
+  support from the keyboard (STU-860).
 - Board export to PNG and JSON from the top bar. The board is redrawn as a standalone
   SVG and rasterised at 2x; the JSON backup is versioned and z-ordered (STU-854).
 - Marquee selection: drag across empty canvas to select everything the rubber band

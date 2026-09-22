@@ -60,6 +60,13 @@ The canvas is operable without a pointer. Tab to it, then:
 | `Cmd/Ctrl + Shift + Z` | Redo |
 | `Delete` / `Backspace` | Delete the selection |
 | `Shift` + click | Add an element to the selection, or remove it |
+| Arrow keys on a resize handle | Resize the element (shift for a bigger step) |
+
+Selecting a sticky note or shape puts eight handles on it — one per corner and edge.
+Dragging a corner moves two edges, an edge moves one, and the opposite side stays put;
+hold shift on a corner to keep the current proportions. Nothing can be dragged smaller
+than 40 units or turned inside out. The handles are buttons, so you can tab to one and
+resize with the arrow keys (shift for a bigger step).
 
 With the select tool, dragging across empty canvas draws a marquee and selects
 everything it touches; shift-click adds an element to the selection or takes it out
