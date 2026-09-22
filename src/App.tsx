@@ -19,10 +19,17 @@ import {
   createConnectorElement,
 } from './lib/element-factories'
 import { partitionElements, findElementAt } from './lib/board-selectors'
+import {
+  colorPatchFor,
+  currentFillOf,
+  supportsColorTarget,
+  type ColorTarget,
+} from './lib/element-colors'
 import { addElement, patchElement, removeElements } from './lib/board-mutations'
 import { toolForShortcut } from './lib/tool-shortcuts'
 import { generateUser } from './lib/user-identity'
 import { useUndoRedo } from './hooks/useUndoRedo'
+import { PASTEL_COLORS } from './types/whiteboard'
 import type {
   BoardElement,
   UserAwareness,
@@ -58,6 +65,8 @@ export default function App() {
 
   const connectionRef = useRef<WhiteboardConnection | null>(null)
   const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null)
+  // Null until the user picks one, so new notes keep their random pastel.
+  const [defaultFill, setDefaultFill] = useState<string | null>(null)
   const roomName = getRoomFromUrl()
 
   // ----------- CRDT Connection & Sync -----------
@@ -170,7 +179,10 @@ export default function App() {
       }
 
       if (activeTool === 'sticky') {
-        const sticky = createStickyElement(worldPoint, { zIndex: elements.size + 1 })
+        const sticky = createStickyElement(worldPoint, {
+          zIndex: elements.size + 1,
+          ...(defaultFill ? { color: defaultFill } : {}),
+        })
         createElement(sticky)
         setSelectedIds(new Set([sticky.id]))
         setActiveTool('select')
@@ -202,7 +214,7 @@ export default function App() {
         if (hitId) removeElements(conn, [hitId])
       }
     },
-    [activeTool, elements, createElement]
+    [activeTool, elements, createElement, defaultFill]
   )
 
   const handleCanvasPointerMove = useCallback(
@@ -314,6 +326,44 @@ export default function App() {
     }
   }, [pendingConnector, elements, createElement])
 
+  // ----------- Colour -----------
+  const selectedElements = Array.from(selectedIds)
+    .map((id) => elements.get(id))
+    .filter((el): el is BoardElement => Boolean(el))
+
+  const handleColorSelect = useCallback(
+    (color: string, target: ColorTarget) => {
+      const selected = Array.from(selectedIds)
+        .map((id) => elements.get(id))
+        .filter((el): el is BoardElement => Boolean(el))
+
+      if (selected.length === 0) {
+        // Nothing selected: the choice becomes the colour of the next note.
+        if (target === 'fill') setDefaultFill(color)
+        return
+      }
+
+      const conn = connectionRef.current
+      if (!conn) return
+
+      // One transaction, so recolouring a selection is a single undo step.
+      conn.doc.transact(() => {
+        selected.forEach((el) => {
+          const patch = colorPatchFor(el, color, target)
+          if (patch) patchElement(conn, el.id, patch)
+        })
+      })
+    },
+    [selectedIds, elements]
+  )
+
+  // Show what the selection actually has, so the palette never claims a colour
+  // the selected element is not wearing.
+  const currentFill =
+    (selectedElements.length === 1 ? currentFillOf(selectedElements[0]) : null) ??
+    defaultFill ??
+    PASTEL_COLORS[0]
+
   // ----------- Derived element lists -----------
   const { stickies, shapes, connectors, drawings } = partitionElements(elements)
 
@@ -384,7 +434,15 @@ export default function App() {
 
       </CanvasViewport>
 
-      <Toolbar activeTool={activeTool} onToolChange={setActiveTool} />
+      <Toolbar
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        color={{
+          value: currentFill,
+          showBorder: supportsColorTarget(selectedElements, 'border'),
+          onSelect: handleColorSelect,
+        }}
+      />
       <ZoomControls viewport={viewport} onViewportChange={setViewport} />
     </div>
   )

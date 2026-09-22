@@ -17,20 +17,28 @@ const fakeAwareness = {
   off: vi.fn(),
 }
 
+/** The connection App is currently using, so tests can inspect the CRDT directly. */
+let board: ReturnType<typeof makeBoard>
+
+function makeBoard() {
+  const { doc, elementsMap, elementOrder } = createWhiteboardDoc(new Y.Doc())
+  return {
+    doc,
+    elementsMap,
+    elementOrder,
+    undoManager: new Y.UndoManager([elementsMap, elementOrder]),
+    wsProvider: null,
+    indexeddbProvider: null,
+    awareness: fakeAwareness,
+    destroy: () => doc.destroy(),
+  }
+}
+
 vi.mock('../src/lib/yjs-provider', () => ({
   getRoomFromUrl: () => 'test-room',
   initWhiteboardConnection: () => {
-    const { doc, elementsMap, elementOrder } = createWhiteboardDoc(new Y.Doc())
-    return {
-      doc,
-      elementsMap,
-      elementOrder,
-      undoManager: new Y.UndoManager([elementsMap, elementOrder]),
-      wsProvider: null,
-      indexeddbProvider: null,
-      awareness: fakeAwareness,
-      destroy: () => doc.destroy(),
-    }
+    board = makeBoard()
+    return board
   },
 }))
 
@@ -292,5 +300,91 @@ describe('App', () => {
     expect(stickies()).toHaveLength(0)
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled()
+  })
+
+  function openColours() {
+    fireEvent.click(screen.getByRole('button', { name: 'Colours' }))
+  }
+
+  it('recolours the selected sticky note', () => {
+    render(<App />)
+
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    fireEvent.pointerDown(stickies()[0], { clientX: 400, clientY: 300 })
+
+    openColours()
+    fireEvent.click(screen.getByRole('button', { name: 'Lavender' }))
+
+    expect(stickies()[0]).toHaveStyle({ backgroundColor: '#E8D7FF' })
+  })
+
+  it('uses the picked colour for the next note when nothing is selected', () => {
+    render(<App />)
+
+    openColours()
+    fireEvent.click(screen.getByRole('button', { name: 'Mint Frost' }))
+
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+
+    expect(stickies()[0]).toHaveStyle({ backgroundColor: '#D4F0F0' })
+  })
+
+  it('offers a border control for a shape but not for a sticky note', () => {
+    render(<App />)
+
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+    fireEvent.pointerDown(stickies()[0], { clientX: 300, clientY: 300 })
+    openColours()
+    expect(screen.queryByRole('group', { name: 'Border' })).not.toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+
+    pickTool('Rectangle')
+    clickCanvasAt(700, 300)
+    const shape = document.querySelector('[data-testid^="shape-"]') as HTMLElement
+    fireEvent.pointerDown(shape, { clientX: 700, clientY: 300 })
+    openColours()
+
+    expect(screen.getByRole('group', { name: 'Border' })).toBeInTheDocument()
+  })
+
+  it('fills a selected shape', () => {
+    render(<App />)
+
+    pickTool('Rectangle')
+    clickCanvasAt(500, 300)
+    const shape = document.querySelector('[data-testid^="shape-"]') as HTMLElement
+    fireEvent.pointerDown(shape, { clientX: 500, clientY: 300 })
+
+    openColours()
+    fireEvent.click(screen.getByRole('button', { name: 'Sky Blue' }))
+
+    expect(document.querySelector('[data-testid^="shape-"] rect')).toHaveAttribute(
+      'fill',
+      '#CCE2FF'
+    )
+  })
+
+  it('recolours in a single transaction, so it is one undo step', () => {
+    render(<App />)
+
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    fireEvent.pointerDown(stickies()[0], { clientX: 400, clientY: 300 })
+
+    // Counting transactions tests the batching this component controls, rather
+    // than Y.UndoManager's capture window, which merges rapid changes anyway.
+    let transactions = 0
+    board.doc.on('afterTransaction', () => {
+      transactions += 1
+    })
+
+    openColours()
+    fireEvent.click(screen.getByRole('button', { name: 'Coral Pink' }))
+
+    expect(stickies()[0]).toHaveStyle({ backgroundColor: '#FFD1DC' })
+    expect(transactions).toBe(1)
   })
 })

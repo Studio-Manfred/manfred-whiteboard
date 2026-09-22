@@ -60,6 +60,10 @@ The canvas is operable without a pointer. Tab to it, then:
 | `Cmd/Ctrl + Shift + Z` | Redo |
 | `Delete` / `Backspace` | Delete the selection |
 
+The toolbar's palette control sets colours. With something selected it recolours it; with
+nothing selected, the fill becomes the colour of the next sticky note. Shapes get a
+separate Border row, and `No fill` empties a shape back to transparent.
+
 Undo and redo also have buttons in the top bar, which disable themselves when there is
 nothing to undo or redo.
 
