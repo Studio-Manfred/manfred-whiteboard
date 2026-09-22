@@ -21,6 +21,8 @@ import {
 } from './lib/element-factories'
 import { partitionElements, findElementAt } from './lib/board-selectors'
 import { elementsInMarquee, rectFromPoints } from './lib/marquee'
+import { boardBounds, boardToJson, boardToSvg } from './lib/board-export'
+import { boardFilename, downloadBlob, svgToPngBlob } from './lib/download'
 import {
   colorPatchFor,
   currentFillOf,
@@ -372,6 +374,23 @@ export default function App() {
     connectionRef.current?.awareness?.setLocalStateField('selection', Array.from(selectedIds))
   }, [selectedIds])
 
+  // ----------- Export -----------
+  const handleExportJson = useCallback(() => {
+    const blob = new Blob([boardToJson(elements)], { type: 'application/json' })
+    downloadBlob(blob, boardFilename(roomName, 'json'))
+  }, [elements, roomName])
+
+  const handleExportPng = useCallback(async () => {
+    const bounds = boardBounds(elements)
+    try {
+      const blob = await svgToPngBlob(boardToSvg(elements), bounds.width, bounds.height)
+      downloadBlob(blob, boardFilename(roomName, 'png'))
+    } catch (error) {
+      // Nothing is downloaded; the board itself is untouched.
+      console.error('Could not export the board as a PNG:', error)
+    }
+  }, [elements, roomName])
+
   // ----------- Colour -----------
   const selectedElements = Array.from(selectedIds)
     .map((id) => elements.get(id))
@@ -420,6 +439,7 @@ export default function App() {
         users={remoteUsers}
         localUserId={localUser.id}
         history={{ canUndo, canRedo, onUndo: undo, onRedo: redo }}
+        export={{ png: handleExportPng, json: handleExportJson }}
       />
 
       <CanvasViewport

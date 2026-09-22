@@ -15,6 +15,8 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Board export to PNG and JSON from the top bar. The board is redrawn as a standalone
+  SVG and rasterised at 2x; the JSON backup is versioned and z-ordered (STU-854).
 - Marquee selection: drag across empty canvas to select everything the rubber band
   touches, shift-click to add or remove, and drag any member to move the whole group.
   Delete, recolour and group moves are each a single undo step (STU-857).

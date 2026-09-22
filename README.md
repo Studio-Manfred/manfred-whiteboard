@@ -76,6 +76,18 @@ nothing to undo or redo.
 The toolbar follows the ARIA APG toolbar pattern: one tab stop, arrow keys and
 Home/End move between tools, and moving focus never changes the active tool.
 
+## Export
+
+The Export button in the top bar downloads the board:
+
+- **PNG** — the board is DOM and SVG layers rather than a `<canvas>`, so there is no
+  bitmap to grab. `lib/board-export.ts` redraws the board as a standalone SVG from the
+  elements themselves, and that is rasterised at 2x.
+- **JSON** — a versioned backup (`{ version, exportedAt, elements }`) with elements
+  ordered back to front, so a reader can rebuild the stack. Nothing imports it yet.
+
+Both are named `manfred-whiteboard-<room>-<date>.<ext>`.
+
 ## Architecture
 
 ```
