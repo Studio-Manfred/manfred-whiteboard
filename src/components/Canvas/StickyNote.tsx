@@ -106,11 +106,14 @@ export function StickyNote({
 
       {/* 4 Connection Anchors */}
       {anchors.map((anchor) => {
+        // Sit clear of the resize handles, which straddle the edge itself:
+        // overlapping them made an anchor impossible to click once selection
+        // put the handles on screen.
         const positionClasses = {
-          top: '-top-2 left-1/2 -translate-x-1/2',
-          right: '-right-2 top-1/2 -translate-y-1/2',
-          bottom: '-bottom-2 left-1/2 -translate-x-1/2',
-          left: '-left-2 top-1/2 -translate-y-1/2',
+          top: '-top-5 left-1/2 -translate-x-1/2',
+          right: '-right-5 top-1/2 -translate-y-1/2',
+          bottom: '-bottom-5 left-1/2 -translate-x-1/2',
+          left: '-left-5 top-1/2 -translate-y-1/2',
         }[anchor]
 
         return (
@@ -118,6 +121,10 @@ export function StickyNote({
             key={anchor}
             type="button"
             aria-label={`Connect from ${anchor} anchor`}
+            // Pointer down must not reach the element beneath: it would select
+            // it, start a drag, and — mid connector-draw — be taken as the
+            // click that completes the connector.
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
               onAnchorClick?.(anchor, e)

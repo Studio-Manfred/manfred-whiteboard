@@ -112,3 +112,45 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
 - **Graduated to:** candidate for `my-process/docs/knowledge/` — every new project from
   the starter will hit both gates.
 
+---
+
+## 2026-09-23 — a Tailwind class that does not exist fails silently, and jsdom agrees
+
+- **Symptom:** connectors and pen strokes could not be clicked, so they could not be
+  selected or deleted. Their component tests passed.
+- **Cause:** both hit areas used `className="pointer-events-stroke"`. **Tailwind has no
+  such utility** — only `pointer-events-none` and `pointer-events-auto`. An unknown class
+  generates no CSS and raises no error, so the path silently inherited
+  `pointer-events: none` from its `<svg>` and never received a click.
+- **Fix / conclusion:** `style={{ pointerEvents: 'stroke' }}`, which is a real SVG value.
+  Two lessons worth keeping:
+  1. **An invented Tailwind class is invisible.** Nothing fails; the element just does
+     not behave. When a CSS-driven behaviour does not work, grep the *built* CSS for the
+     class before debugging the logic: `grep -o "my-class" dist/assets/*.css`.
+  2. **`fireEvent.click` proves nothing about clickability.** It dispatches straight at
+     the node and never consults CSS hit-testing, so a component test happily "clicks" an
+     element no user could reach. Anything whose behaviour depends on pointer-events,
+     z-order or overlap needs an E2E test. Same family as the jsdom `PointerEvent` gap
+     logged above.
+- **Graduated to:** candidate for `my-process/docs/knowledge/` alongside the
+  PointerEvent entry — together they say "jsdom does not do layout, so test anything
+  spatial in a real browser."
+
+---
+
+## 2026-09-23 — resize handles made connection anchors unclickable
+
+- **Symptom:** after the resize feature shipped, clicking an element's connection anchor
+  did nothing, so new arrows could not be drawn.
+- **Cause:** two compounding faults. The edge resize handles straddle the element's edge,
+  exactly where the anchors sat, and they appear the instant an element is selected — so
+  pressing an anchor selected the element, spawned a handle under the pointer, and the
+  mouseup landed on the handle instead. Separately, the anchor stopped propagation on
+  `click` but not on `pointerdown`, so the press also reached the element beneath and was
+  taken as the click that *completes* a connector.
+- **Fix / conclusion:** move the anchors clear of the edge, and stop propagation on
+  `pointerdown` as well as `click`. General lesson: a control that appears *as a result
+  of* a press can swallow that same press — when adding affordances to a selected
+  element, check what else already lives at those coordinates.
+- **Graduated to:** not yet.
+

@@ -249,4 +249,25 @@ describe('StickyNote Component', () => {
 
     expect(screen.getByText('Remote edit')).toBeInTheDocument()
   })
+  it('does not select or drag the element when an anchor is pressed', () => {
+    const onSelect = vi.fn()
+    const onDragStart = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={onSelect}
+        onUpdate={vi.fn()}
+        onDragStart={onDragStart}
+        onAnchorClick={vi.fn()}
+      />
+    )
+
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'Connect from right anchor' })
+    )
+
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(onDragStart).not.toHaveBeenCalled()
+  })
 })

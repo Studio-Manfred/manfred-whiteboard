@@ -81,7 +81,10 @@ export function ConnectorLayer({
               fill="none"
               stroke="transparent"
               strokeWidth={16}
-              className="pointer-events-stroke cursor-pointer"
+              // `pointer-events-stroke` is not a Tailwind utility and generated no CSS,
+        // so this path inherited pointer-events:none from the svg and was unclickable.
+        style={{ pointerEvents: 'stroke' }}
+        className="cursor-pointer"
               onClick={(e) => onSelect(connector.id, e)}
             />
             {/* Visible connector path */}

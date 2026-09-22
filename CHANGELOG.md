@@ -54,6 +54,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Connectors and pen strokes could not be clicked, so they could not be selected or
+  deleted. Their hit areas carried `pointer-events-stroke`, which is not a Tailwind
+  utility and generated no CSS, leaving them to inherit `pointer-events: none` from the
+  SVG layer (STU-861).
+- Connection anchors were unusable once resize handles existed: the handles straddle the
+  edge the anchors sat on and appear on selection, so they swallowed the click. Anchors
+  now sit clear of them, and no longer let a press through to the element beneath
+  (STU-861).
+
 - Multiplayer never connected: the client dialled `ws://localhost:1234` while the relay
   listens on `4444`, so every tab silently fell back to its local IndexedDB copy. The
   endpoint now defaults to the relay's port and can be overridden with `VITE_WS_URL`.
