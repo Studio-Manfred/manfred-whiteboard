@@ -75,6 +75,28 @@ server/         ws-server.mjs — minimal y-websocket relay for local dev
 Logic lives in `src/lib` as pure functions so it can be tested without rendering the
 canvas; components stay thin around it.
 
+## Deployment
+
+Hosted on Vercel (`studio-manfred/manfred-whiteboard`), built from
+[Studio-Manfred/manfred-whiteboard](https://github.com/Studio-Manfred/manfred-whiteboard).
+
+Two pieces of setup are needed once per environment, because `package.json` depends on
+the private `@studio-manfred/manfred-design-system` package:
+
+- **CI:** the repository must be granted read access to that package
+  (org → Packages → the package → Manage Actions access → add this repo). Without it
+  `npm ci` fails `403 permission_denied: read_package`.
+- **Vercel:** `GITHUB_TOKEN` must exist in each environment you build in — set it from
+  the CLI, per environment: `gh auth token | vercel env add GITHUB_TOKEN preview`.
+  A Production-only variable will not satisfy a preview build.
+
+Preview deployments sit behind Vercel Deployment Protection, so automated checks need
+`vercel curl <url>` rather than plain `curl`, which only sees the SSO redirect.
+
+**The deployed app is single-player.** `server/ws-server.mjs` is a local dev relay, so a
+hosted build has nothing to connect to and every browser keeps its own IndexedDB copy of
+the board. Hosted multiplayer needs a relay host plus `VITE_WS_URL` pointing at it.
+
 ## Testing
 
 Vitest and Testing Library for units and components, Playwright for end-to-end —

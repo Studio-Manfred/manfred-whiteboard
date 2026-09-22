@@ -92,3 +92,23 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
   landed untested, not as a broken gate.
 - **Graduated to:** not yet.
 
+---
+
+## 2026-09-22 — a new repo cannot install the private design-system package
+
+- **Symptom:** the first CI run on a brand-new repo failed at `npm ci` with
+  `403 permission_denied: read_package` for `@studio-manfred/manfred-design-system`;
+  the first Vercel build failed the same way with `401 unauthenticated`.
+- **Cause:** two separate gates, easily mistaken for one. GitHub Actions authenticates
+  with the built-in `GITHUB_TOKEN`, which only reaches an org package once that package
+  grants the repository read access. Vercel is not GitHub Actions and has no such token
+  at all — it needs `GITHUB_TOKEN` in its own environment, **per environment**: a
+  Production variable does not cover a preview build.
+- **Fix / conclusion:** grant the repo access on the package (UI only — there is no REST
+  endpoint for npm package access grants, so a `read:packages` token cannot do it), and
+  add the Vercel variable per environment from the CLI. Worth asking early whether the
+  dependency is used at all: here it was declared but imported by no file, and an unused
+  private dependency turns a public repo into one outsiders cannot build.
+- **Graduated to:** candidate for `my-process/docs/knowledge/` — every new project from
+  the starter will hit both gates.
+

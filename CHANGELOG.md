@@ -21,7 +21,8 @@ All notable changes to this project are documented here. The format follows
 - Unit and component tests across the canvas and UI layer, an App integration test
   driving the real component tree against an in-memory Yjs document, and a
   `PointerEvent` polyfill in the test setup (jsdom has none).
-- `README.md` and this changelog.
+- `README.md` (including deployment setup and the single-player caveat) and this
+  changelog.
 
 ### Changed
 

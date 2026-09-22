@@ -36,8 +36,20 @@ half-done, and the next pickup point. Convert relative dates to absolute.
   (drag origin was the element position, not the pointer's); and `fireEvent.pointer*` in
   jsdom was dropping coordinates entirely for want of a `PointerEvent` polyfill, so
   pointer assertions had been meaningless.
-- **Next pickup:** plan task 11 — no git remote, no GitHub repo, no Vercel link — and
-  note a deployed build has no relay (`ws-server.mjs` is dev-only; hosted multiplayer
+- **Shipped to GitHub + Vercel (2026-09-22):** repo created **public** at
+  Studio-Manfred/manfred-whiteboard, `main` fast-forwarded to the full branch, CI green
+  (verify 44s, E2E 1m3s, 8 specs under `AXE_ENFORCE=1`), and a preview deployment is
+  Ready and serving (SPA rewrite and both bundles verified with `vercel curl` — plain
+  curl only sees the Deployment Protection redirect). Plan task 11 is now done bar the
+  production promotion.
+- **Deploy gotchas, both hit:** the repo needed package read access for CI, and Vercel
+  needed `GITHUB_TOKEN` added *per environment* (Production alone did not cover the
+  preview build). Both logged in `knowledge/ERRORS.md`.
+- **Still declared, still unused:** `@studio-manfred/manfred-design-system` is in
+  `package.json` but imported by no file. Kept deliberately (user's call), at the cost
+  of a credential in the Vercel env and a public repo outsiders cannot install.
+- **Next pickup:** host a relay and set `VITE_WS_URL` — the deployed board is
+  single-player until then (`ws-server.mjs` is dev-only; hosted multiplayer
   needs a relay host and `VITE_WS_URL`). Then the task 9 gaps: PNG/JSON export,
   toolbar colour picker, undo/redo buttons. `SelectionOverlay` is written and tested
   but never rendered by App — wire up marquee selection or delete it. Linear tickets
