@@ -22,6 +22,7 @@ import {
 import { partitionElements, findElementAt } from './lib/board-selectors'
 import { elementsInMarquee, rectFromPoints } from './lib/marquee'
 import { boardBounds, boardToJson, boardToSvg } from './lib/board-export'
+import { resizeRect, type ResizeHandle } from './lib/resize'
 import { boardFilename, downloadBlob, svgToPngBlob } from './lib/download'
 import {
   colorPatchFor,
@@ -68,6 +69,14 @@ export default function App() {
 
   /** Rubber-band selection in world coordinates; null when not dragging one. */
   const [marquee, setMarquee] = useState<{ start: Point; current: Point } | null>(null)
+
+  const resizeState = useRef<{
+    elementId: string
+    handle: ResizeHandle
+    /** The element's geometry when the drag started, so deltas stay absolute. */
+    startRect: { x: number; y: number; width: number; height: number }
+    startWorld: Point
+  } | null>(null)
 
   const connectionRef = useRef<WhiteboardConnection | null>(null)
   const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null)
@@ -226,7 +235,7 @@ export default function App() {
   )
 
   const handleCanvasPointerMove = useCallback(
-    (worldPoint: Point) => {
+    (worldPoint: Point, e: React.PointerEvent) => {
       // Broadcast cursor position
       const conn = connectionRef.current
       if (conn?.awareness) {
@@ -236,6 +245,22 @@ export default function App() {
       // Active drawing
       if (activeTool === 'pen' && isDrawing.current) {
         setDrawingPoints((prev) => [...prev, { x: worldPoint.x, y: worldPoint.y }])
+        return
+      }
+
+      // Resize in progress — measured from where the drag began, not the last frame
+      if (resizeState.current) {
+        const { elementId, handle, startRect, startWorld } = resizeState.current
+        const conn = connectionRef.current
+        if (!conn) return
+
+        const next = resizeRect(
+          startRect,
+          handle,
+          { x: worldPoint.x - startWorld.x, y: worldPoint.y - startWorld.y },
+          { preserveAspectRatio: e.shiftKey }
+        )
+        patchElement(conn, elementId, next)
         return
       }
 
@@ -278,6 +303,8 @@ export default function App() {
         setDrawingPoints([])
         return
       }
+
+      resizeState.current = null
 
       // Finish the rubber band; the selection it produced stays put.
       if (marquee) {
@@ -373,6 +400,38 @@ export default function App() {
   useEffect(() => {
     connectionRef.current?.awareness?.setLocalStateField('selection', Array.from(selectedIds))
   }, [selectedIds])
+
+  // ----------- Resize -----------
+  const handleResizeStart = useCallback(
+    (id: string, handle: ResizeHandle, e: React.PointerEvent) => {
+      const el = elements.get(id)
+      if (!el) return
+
+      resizeState.current = {
+        elementId: id,
+        handle,
+        startRect: { x: el.x, y: el.y, width: el.width, height: el.height },
+        startWorld: pointerWorld(e),
+      }
+    },
+    [elements, pointerWorld]
+  )
+
+  const handleResizeByKeyboard = useCallback(
+    (id: string, handle: ResizeHandle, delta: Point) => {
+      const el = elements.get(id)
+      const conn = connectionRef.current
+      if (!el || !conn) return
+
+      const next = resizeRect(
+        { x: el.x, y: el.y, width: el.width, height: el.height },
+        handle,
+        delta
+      )
+      patchElement(conn, id, next)
+    },
+    [elements]
+  )
 
   // ----------- Export -----------
   const handleExportJson = useCallback(() => {
@@ -478,6 +537,10 @@ export default function App() {
             onUpdate={(partial) => updateElement(shape.id, partial)}
             onDragStart={(e) => handleDragStart(shape.id, pointerWorld(e), e)}
             onAnchorClick={(anchor) => handleAnchorClick(shape.id, anchor)}
+            onResizeStart={(handle, e) => handleResizeStart(shape.id, handle, e)}
+            onResizeByKeyboard={(handle, delta) =>
+              handleResizeByKeyboard(shape.id, handle, delta)
+            }
           />
         ))}
 
@@ -491,6 +554,10 @@ export default function App() {
             onUpdate={(partial) => updateElement(sticky.id, partial)}
             onDragStart={(e) => handleDragStart(sticky.id, pointerWorld(e), e)}
             onAnchorClick={(anchor) => handleAnchorClick(sticky.id, anchor)}
+            onResizeStart={(handle, e) => handleResizeStart(sticky.id, handle, e)}
+            onResizeByKeyboard={(handle, delta) =>
+              handleResizeByKeyboard(sticky.id, handle, delta)
+            }
           />
         ))}
 

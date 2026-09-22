@@ -137,7 +137,7 @@ describe('ShapeItem', () => {
     expect(handlers.onSelect).not.toHaveBeenCalled()
   })
 
-  it('shows a resize handle only when selected and resizable', () => {
+  it('shows resize handles only when selected and resizable', () => {
     const onResizeStart = vi.fn()
     const { rerender } = render(
       <ShapeItem
@@ -147,9 +147,12 @@ describe('ShapeItem', () => {
         onUpdate={vi.fn()}
         onDragStart={vi.fn()}
         onResizeStart={onResizeStart}
+        onResizeByKeyboard={vi.fn()}
       />
     )
-    expect(screen.queryByLabelText('Resize element')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Resize from/ })
+    ).not.toBeInTheDocument()
 
     rerender(
       <ShapeItem
@@ -159,10 +162,14 @@ describe('ShapeItem', () => {
         onUpdate={vi.fn()}
         onDragStart={vi.fn()}
         onResizeStart={onResizeStart}
+        onResizeByKeyboard={vi.fn()}
       />
     )
-    fireEvent.pointerDown(screen.getByLabelText('Resize element'))
-    expect(onResizeStart).toHaveBeenCalledOnce()
+    expect(screen.getAllByRole('button', { name: /^Resize from/ })).toHaveLength(8)
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'Resize from bottom right corner' })
+    )
+    expect(onResizeStart).toHaveBeenCalledWith('se', expect.anything())
   })
 
   it('picks up a label changed by another collaborator', () => {

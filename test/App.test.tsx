@@ -630,4 +630,141 @@ describe('App', () => {
     errors.mockRestore()
     click.mockRestore()
   })
+
+  function selectFirstNote() {
+    const note = stickies()[0] as HTMLElement
+    fireEvent.pointerDown(note, { clientX: 400, clientY: 300 })
+    return note
+  }
+
+  function handle(name: string) {
+    return screen.getByRole('button', { name: `Resize from ${name}` })
+  }
+
+  it('shows resize handles only on a selected element', () => {
+    render(<App />)
+
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    // Creating selects it, so deselect first.
+    clickCanvasAt(50, 50)
+    expect(screen.queryByRole('button', { name: /^Resize from/ })).not.toBeInTheDocument()
+
+    selectFirstNote()
+
+    expect(screen.getAllByRole('button', { name: /^Resize from/ })).toHaveLength(8)
+  })
+
+  it('grows a note by dragging its right edge', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    const note = selectFirstNote()
+    const before = parseFloat(note.style.width)
+
+    fireEvent.pointerDown(handle('right edge'), { clientX: 500, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 560, clientY: 300 })
+    fireEvent.pointerUp(canvas(), { clientX: 560, clientY: 300 })
+
+    expect(parseFloat(stickies()[0].style.width)).toBeCloseTo(before + 60)
+    expect(parseFloat(stickies()[0].style.height)).toBeCloseTo(200)
+  })
+
+  it('keeps the far edge pinned when dragging the left edge', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    const note = selectFirstNote()
+    const rightEdge = parseFloat(note.style.left) + parseFloat(note.style.width)
+
+    fireEvent.pointerDown(handle('left edge'), { clientX: 300, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 260, clientY: 300 })
+    fireEvent.pointerUp(canvas(), { clientX: 260, clientY: 300 })
+
+    const after = stickies()[0] as HTMLElement
+    expect(parseFloat(after.style.left) + parseFloat(after.style.width)).toBeCloseTo(rightEdge)
+    expect(parseFloat(after.style.width)).toBeCloseTo(240)
+  })
+
+  it('resizes both axes from a corner', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    selectFirstNote()
+
+    fireEvent.pointerDown(handle('bottom right corner'), { clientX: 500, clientY: 400 })
+    fireEvent.pointerMove(canvas(), { clientX: 550, clientY: 430 })
+    fireEvent.pointerUp(canvas(), { clientX: 550, clientY: 430 })
+
+    const after = stickies()[0] as HTMLElement
+    expect(parseFloat(after.style.width)).toBeCloseTo(250)
+    expect(parseFloat(after.style.height)).toBeCloseTo(230)
+  })
+
+  it('will not let an element be dragged inside out', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    selectFirstNote()
+
+    fireEvent.pointerDown(handle('right edge'), { clientX: 500, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 100, clientY: 300 })
+    fireEvent.pointerUp(canvas(), { clientX: 100, clientY: 300 })
+
+    expect(parseFloat(stickies()[0].style.width)).toBe(40)
+  })
+
+  it('does not move the element when a handle is grabbed', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    const note = selectFirstNote()
+    const left = note.style.left
+
+    fireEvent.pointerDown(handle('right edge'), { clientX: 500, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 540, clientY: 340 })
+    fireEvent.pointerUp(canvas(), { clientX: 540, clientY: 340 })
+
+    expect((stickies()[0] as HTMLElement).style.left).toBe(left)
+  })
+
+  it('resizes from the keyboard', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    selectFirstNote()
+
+    fireEvent.keyDown(handle('right edge'), { key: 'ArrowRight' })
+    expect(parseFloat(stickies()[0].style.width)).toBeCloseTo(210)
+
+    fireEvent.keyDown(handle('right edge'), { key: 'ArrowRight', shiftKey: true })
+    expect(parseFloat(stickies()[0].style.width)).toBeCloseTo(250)
+  })
+
+  it('resizes a shape too', () => {
+    render(<App />)
+    pickTool('Rectangle')
+    clickCanvasAt(400, 300)
+    const shape = document.querySelector('[data-testid^="shape-"]') as HTMLElement
+    fireEvent.pointerDown(shape, { clientX: 400, clientY: 300 })
+
+    fireEvent.keyDown(handle('bottom edge'), { key: 'ArrowDown' })
+
+    const after = document.querySelector('[data-testid^="shape-"]') as HTMLElement
+    expect(parseFloat(after.style.height)).toBeCloseTo(110)
+  })
+
+  it('resizes in board units, whatever the zoom', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    selectFirstNote()
+
+    // Zoom to 200%: an on-screen drag of 100px is 50 board units.
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom In' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom In' }))
+
+    const width = parseFloat(stickies()[0].style.width)
+    expect(width).toBeCloseTo(200)
+  })
 })
