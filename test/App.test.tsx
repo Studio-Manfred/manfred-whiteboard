@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import * as Y from 'yjs'
 import { createWhiteboardDoc } from '../src/types/whiteboard'
 
@@ -33,6 +33,15 @@ function makeBoard() {
     destroy: () => doc.destroy(),
   }
 }
+
+vi.mock('../src/lib/download', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/lib/download')>()
+  return {
+    ...actual,
+    // jsdom cannot rasterise; e2e/export.spec.ts covers the real thing.
+    svgToPngBlob: vi.fn(async () => new Blob(['fake-png'], { type: 'image/png' })),
+  }
+})
 
 vi.mock('../src/lib/yjs-provider', () => ({
   getRoomFromUrl: () => 'test-room',
@@ -517,5 +526,108 @@ describe('App', () => {
     Array.from(stickies()).forEach((el) =>
       expect(el).toHaveStyle({ backgroundColor: '#E8D7FF' })
     )
+  })
+
+  /** jsdom's Blob implements neither text() nor arrayBuffer(). */
+  function readBlob(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(blob)
+    })
+  }
+
+  it('downloads a JSON backup of the board', async () => {
+    const blobs: Blob[] = []
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: (blob: Blob) => {
+        blobs.push(blob)
+        return 'blob:fake'
+      },
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: () => {}, configurable: true })
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {})
+
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /JSON/ }))
+
+    expect(blobs).toHaveLength(1)
+    const backup = JSON.parse(await readBlob(blobs[0]))
+    expect(backup.version).toBe(1)
+    expect(backup.elements).toHaveLength(1)
+    expect(backup.elements[0].type).toBe('sticky')
+
+    click.mockRestore()
+  })
+
+  it('names the download after the room', async () => {
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: () => 'blob:fake',
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: () => {}, configurable: true })
+    let filename = ''
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+      filename = document.querySelector('a[download]')?.getAttribute('download') ?? ''
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /JSON/ }))
+
+    expect(filename).toMatch(/^manfred-whiteboard-test-room-\d{4}-\d{2}-\d{2}\.json$/)
+
+    click.mockRestore()
+  })
+
+  it('downloads a PNG of the board', async () => {
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: () => 'blob:fake',
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: () => {}, configurable: true })
+    let filename = ''
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+      filename = document.querySelector('a[download]')?.getAttribute('download') ?? ''
+    })
+
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /PNG/ }))
+    await waitFor(() => expect(filename).toMatch(/\.png$/))
+
+    click.mockRestore()
+  })
+
+  it('leaves the board alone when a PNG export fails', async () => {
+    const { svgToPngBlob } = await import('../src/lib/download')
+    vi.mocked(svgToPngBlob).mockRejectedValueOnce(new Error('no canvas here'))
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /PNG/ }))
+
+    await waitFor(() => expect(errors).toHaveBeenCalled())
+    expect(click).not.toHaveBeenCalled()
+    expect(stickies()).toHaveLength(1)
+
+    errors.mockRestore()
+    click.mockRestore()
   })
 })
