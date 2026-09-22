@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Marquee selection: drag across empty canvas to select everything the rubber band
+  touches, shift-click to add or remove, and drag any member to move the whole group.
+  Delete, recolour and group moves are each a single undo step (STU-857).
 - Colour picker in the toolbar: recolours the selection, or sets the colour of the next
   sticky note when nothing is selected. Shapes get fill and border separately, and can be
   emptied back to transparent (STU-855).

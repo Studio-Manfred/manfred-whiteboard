@@ -387,4 +387,135 @@ describe('App', () => {
     expect(stickies()[0]).toHaveStyle({ backgroundColor: '#FFD1DC' })
     expect(transactions).toBe(1)
   })
+
+  function selected() {
+    return Array.from(document.querySelectorAll('[data-testid^="sticky-"]')).filter((el) =>
+      el.className.includes('ring-blue-500')
+    )
+  }
+
+  function dragCanvas(from: { x: number; y: number }, to: { x: number; y: number }) {
+    fireEvent.pointerDown(canvas(), { clientX: from.x, clientY: from.y })
+    fireEvent.pointerMove(canvas(), { clientX: to.x, clientY: to.y })
+    fireEvent.pointerUp(canvas(), { clientX: to.x, clientY: to.y })
+  }
+
+  function placeTwoNotes() {
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(700, 300)
+  }
+
+  it('selects everything a marquee sweeps', () => {
+    render(<App />)
+    placeTwoNotes()
+
+    dragCanvas({ x: 120, y: 120 }, { x: 900, y: 500 })
+
+    expect(selected()).toHaveLength(2)
+  })
+
+  it('selects only what the marquee actually touches', () => {
+    render(<App />)
+    placeTwoNotes()
+
+    dragCanvas({ x: 120, y: 120 }, { x: 420, y: 500 })
+
+    expect(selected()).toHaveLength(1)
+  })
+
+  it('shows the marquee while dragging and takes it away afterwards', () => {
+    render(<App />)
+    placeTwoNotes()
+
+    fireEvent.pointerDown(canvas(), { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(canvas(), { clientX: 600, clientY: 400 })
+    expect(screen.getByTestId('selection-marquee')).toBeInTheDocument()
+
+    fireEvent.pointerUp(canvas(), { clientX: 600, clientY: 400 })
+    expect(screen.queryByTestId('selection-marquee')).not.toBeInTheDocument()
+  })
+
+  it('clears the selection on a click with no drag', () => {
+    render(<App />)
+    placeTwoNotes()
+    dragCanvas({ x: 120, y: 120 }, { x: 900, y: 500 })
+    expect(selected()).toHaveLength(2)
+
+    clickCanvasAt(50, 50)
+
+    expect(selected()).toHaveLength(0)
+  })
+
+  it('adds to and removes from the selection with shift-click', () => {
+    render(<App />)
+    placeTwoNotes()
+    const [first, second] = Array.from(stickies())
+
+    fireEvent.pointerDown(first, { clientX: 300, clientY: 300 })
+    expect(selected()).toHaveLength(1)
+
+    fireEvent.pointerDown(second, { clientX: 700, clientY: 300, shiftKey: true })
+    expect(selected()).toHaveLength(2)
+
+    fireEvent.pointerDown(second, { clientX: 700, clientY: 300, shiftKey: true })
+    expect(selected()).toHaveLength(1)
+  })
+
+  it('moves the whole selection when one of its members is dragged', () => {
+    render(<App />)
+    placeTwoNotes()
+    dragCanvas({ x: 120, y: 120 }, { x: 900, y: 500 })
+    const [first, second] = Array.from(stickies())
+    const before = [first.style.left, second.style.left]
+
+    fireEvent.pointerDown(first, { clientX: 300, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 350, clientY: 300 })
+    fireEvent.pointerUp(canvas(), { clientX: 350, clientY: 300 })
+
+    const after = Array.from(stickies()).map((el) => (el as HTMLElement).style.left)
+    expect(parseFloat(after[0])).toBeCloseTo(parseFloat(before[0]) + 50)
+    expect(parseFloat(after[1])).toBeCloseTo(parseFloat(before[1]) + 50)
+  })
+
+  it('moves a group in a single transaction', () => {
+    render(<App />)
+    placeTwoNotes()
+    dragCanvas({ x: 120, y: 120 }, { x: 900, y: 500 })
+
+    let transactions = 0
+    board.doc.on('afterTransaction', () => {
+      transactions += 1
+    })
+
+    fireEvent.pointerDown(stickies()[0], { clientX: 300, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 320, clientY: 300 })
+    fireEvent.pointerUp(canvas(), { clientX: 320, clientY: 300 })
+
+    expect(transactions).toBe(1)
+  })
+
+  it('deletes everything selected at once', () => {
+    render(<App />)
+    placeTwoNotes()
+    dragCanvas({ x: 120, y: 120 }, { x: 900, y: 500 })
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(stickies()).toHaveLength(0)
+  })
+
+  it('recolours a whole selection at once', () => {
+    render(<App />)
+    placeTwoNotes()
+    dragCanvas({ x: 120, y: 120 }, { x: 900, y: 500 })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Colours' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lavender' }))
+
+    Array.from(stickies()).forEach((el) =>
+      expect(el).toHaveStyle({ backgroundColor: '#E8D7FF' })
+    )
+  })
 })

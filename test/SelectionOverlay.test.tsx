@@ -32,4 +32,11 @@ describe('SelectionOverlay', () => {
     expect(style.width).toBe('0px')
     expect(style.height).toBe('0px')
   })
+  it('is findable as the marquee', () => {
+    const { getByTestId } = render(
+      <SelectionOverlay start={{ x: 0, y: 0 }} current={{ x: 10, y: 10 }} />
+    )
+
+    expect(getByTestId('selection-marquee')).toBeInTheDocument()
+  })
 })

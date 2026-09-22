@@ -59,6 +59,12 @@ The canvas is operable without a pointer. Tab to it, then:
 | `Cmd/Ctrl + Z` | Undo |
 | `Cmd/Ctrl + Shift + Z` | Redo |
 | `Delete` / `Backspace` | Delete the selection |
+| `Shift` + click | Add an element to the selection, or remove it |
+
+With the select tool, dragging across empty canvas draws a marquee and selects
+everything it touches; shift-click adds an element to the selection or takes it out
+again. Dragging any member of a selection moves the whole group, and delete, recolour
+and undo all treat it as one action.
 
 The toolbar's palette control sets colours. With something selected it recolours it; with
 nothing selected, the fill becomes the colour of the next sticky note. Shapes get a
