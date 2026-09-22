@@ -15,6 +15,8 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Undo and redo buttons in the top bar, disabled when the history is empty, driven by
+  the same `useUndoRedo` hook as the keyboard shortcuts (STU-856).
 - Minimal y-websocket relay (`server/ws-server.mjs`) for local multiplayer.
 - Multi-tab Playwright spec covering element, text and presence sync across two
   browser contexts.

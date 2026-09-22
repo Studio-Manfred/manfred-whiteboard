@@ -248,4 +248,49 @@ describe('App', () => {
 
     expect(stickies()[0]).toHaveStyle({ left: '350px', top: '240px' })
   })
+
+  it('starts with nothing to undo or redo', () => {
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+  })
+
+  it('enables undo once something is on the board', () => {
+    render(<App />)
+
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+  })
+
+  it('undoes and redoes from the buttons, not just the keyboard', () => {
+    render(<App />)
+
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    expect(stickies()).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(stickies()).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
+    expect(stickies()).toHaveLength(1)
+  })
+
+  it('keeps the buttons in step with the keyboard shortcuts', () => {
+    render(<App />)
+
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+
+    fireEvent.keyDown(window, { key: 'z', metaKey: true })
+
+    expect(stickies()).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled()
+  })
 })

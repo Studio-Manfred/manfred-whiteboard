@@ -56,6 +56,12 @@ The canvas is operable without a pointer. Tab to it, then:
 | `+` / `-` | Zoom around the canvas centre |
 | `0` | Reset zoom to 100% |
 | `V` `H` `S` `R` `C` `L` `P` `E` | Select, pan, sticky, rectangle, circle, connector, pen, eraser |
+| `Cmd/Ctrl + Z` | Undo |
+| `Cmd/Ctrl + Shift + Z` | Redo |
+| `Delete` / `Backspace` | Delete the selection |
+
+Undo and redo also have buttons in the top bar, which disable themselves when there is
+nothing to undo or redo.
 
 The toolbar follows the ARIA APG toolbar pattern: one tab stop, arrow keys and
 Home/End move between tools, and moving focus never changes the active tool.

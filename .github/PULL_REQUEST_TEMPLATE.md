@@ -18,4 +18,4 @@ Run `npm run test:coverage && npm run coverage:check` locally before pushing.
 -->
 
 ## Linked issues
-<!-- e.g. Closes MWB-XXX, Refs MWB-YYY -->
+<!-- e.g. Closes STU-XXX, Refs STU-YYY -->
