@@ -34,7 +34,10 @@ const DrawingPath = React.memo(function DrawingPath({
         fill="none"
         stroke="transparent"
         strokeWidth={Math.max(12, element.strokeWidth + 10)}
-        className="pointer-events-stroke cursor-pointer"
+        // `pointer-events-stroke` is not a Tailwind utility and generated no CSS,
+        // so this path inherited pointer-events:none from the svg and was unclickable.
+        style={{ pointerEvents: 'stroke' }}
+        className="cursor-pointer"
         onClick={(e) => onSelect(element.id, e)}
       />
       <path
