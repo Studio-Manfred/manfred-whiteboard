@@ -1,14 +1,22 @@
 
 import { ActiveUsers } from './ActiveUsers'
+import { UndoRedoControls } from './UndoRedoControls'
 import type { UserAwareness } from '../../types/whiteboard'
 
 interface TopNavProps {
   roomName: string
   users: UserAwareness[]
   localUserId: string
+  /** Omitted until the board document is ready. */
+  history?: {
+    canUndo: boolean
+    canRedo: boolean
+    onUndo: () => void
+    onRedo: () => void
+  }
 }
 
-export function TopNav({ roomName, users, localUserId }: TopNavProps) {
+export function TopNav({ roomName, users, localUserId, history }: TopNavProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm">
       {/* Left: Brand + room */}
@@ -27,8 +35,18 @@ export function TopNav({ roomName, users, localUserId }: TopNavProps) {
         </span>
       </div>
 
-      {/* Right: Active users */}
-      <ActiveUsers users={users} localUserId={localUserId} />
+      {/* Right: history, then presence */}
+      <div className="flex items-center gap-3">
+        {history && (
+          <UndoRedoControls
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            onUndo={history.onUndo}
+            onRedo={history.onRedo}
+          />
+        )}
+        <ActiveUsers users={users} localUserId={localUserId} />
+      </div>
     </header>
   )
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import type * as Y from 'yjs'
 import { CanvasViewport, type CanvasTool } from './components/Canvas/CanvasViewport'
 import { StickyNote } from './components/Canvas/StickyNote'
 import { ShapeItem } from './components/Canvas/ShapeItem'
@@ -21,6 +22,7 @@ import { partitionElements, findElementAt } from './lib/board-selectors'
 import { addElement, patchElement, removeElements } from './lib/board-mutations'
 import { toolForShortcut } from './lib/tool-shortcuts'
 import { generateUser } from './lib/user-identity'
+import { useUndoRedo } from './hooks/useUndoRedo'
 import type {
   BoardElement,
   UserAwareness,
@@ -55,12 +57,14 @@ export default function App() {
   } | null>(null)
 
   const connectionRef = useRef<WhiteboardConnection | null>(null)
+  const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null)
   const roomName = getRoomFromUrl()
 
   // ----------- CRDT Connection & Sync -----------
   useEffect(() => {
     const conn = initWhiteboardConnection(roomName)
     connectionRef.current = conn
+    setUndoManager(conn.undoManager)
 
     // Set initial awareness
     if (conn.awareness) {
@@ -99,9 +103,12 @@ export default function App() {
     return () => {
       conn.elementsMap.unobserve(syncElements)
       conn.awareness?.off('change', syncAwareness)
+      setUndoManager(null)
       conn.destroy()
     }
   }, [roomName])
+
+  const { canUndo, canRedo, undo, redo } = useUndoRedo(undoManager)
 
   // ----------- Keyboard Shortcuts -----------
   useEffect(() => {
@@ -127,19 +134,17 @@ export default function App() {
       // Undo / Redo
       if ((e.metaKey || e.ctrlKey) && key === 'z') {
         e.preventDefault()
-        const conn = connectionRef.current
-        if (!conn) return
         if (e.shiftKey) {
-          conn.undoManager.redo()
+          redo()
         } else {
-          conn.undoManager.undo()
+          undo()
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedIds])
+  }, [selectedIds, undo, redo])
 
   // ----------- Element CRDT helpers -----------
   const updateElement = useCallback((id: string, partial: Partial<BoardElement>) => {
@@ -314,7 +319,12 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-slate-50">
-      <TopNav roomName={roomName} users={remoteUsers} localUserId={localUser.id} />
+      <TopNav
+        roomName={roomName}
+        users={remoteUsers}
+        localUserId={localUser.id}
+        history={{ canUndo, canRedo, onUndo: undo, onRedo: redo }}
+      />
 
       <CanvasViewport
         viewport={viewport}

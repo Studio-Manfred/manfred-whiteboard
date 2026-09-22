@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { ActiveUsers } from '../src/components/UI/ActiveUsers'
 import { TopNav } from '../src/components/UI/TopNav'
 import type { UserAwareness } from '../src/types/whiteboard'
@@ -63,5 +63,27 @@ describe('TopNav', () => {
     render(<TopNav roomName="default-room" users={[peer('a')]} localUserId="me" />)
 
     expect(screen.getByRole('group', { name: '1 other user online' })).toBeInTheDocument()
+  })
+
+  it('shows history controls when they are provided', () => {
+    const onUndo = vi.fn()
+    render(
+      <TopNav
+        roomName="default-room"
+        users={[]}
+        localUserId="me"
+        history={{ canUndo: true, canRedo: false, onUndo, onRedo: vi.fn() }}
+      />
+    )
+
+    expect(screen.getByRole('group', { name: 'History' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(onUndo).toHaveBeenCalledOnce()
+  })
+
+  it('renders without history controls when none are given', () => {
+    render(<TopNav roomName="default-room" users={[]} localUserId="me" />)
+
+    expect(screen.queryByRole('group', { name: 'History' })).not.toBeInTheDocument()
   })
 })
