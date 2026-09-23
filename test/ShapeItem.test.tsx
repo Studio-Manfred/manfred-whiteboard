@@ -317,4 +317,44 @@ describe('ShapeItem', () => {
     // otherwise crowd the text against the edge.
     expect(paddingFor(16)).toBeGreaterThan(paddingFor(2))
   })
+  it('carries a shadow that follows its outline, not a box around it', () => {
+    const { container } = render(
+      <ShapeItem
+        element={{ ...rectangle, shapeType: 'circle' }}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    // A box shadow would be rectangular even around a circle.
+    const svg = container.querySelector('svg') as SVGElement
+    expect(svg.style.filter).toContain('drop-shadow')
+    expect(screen.getByTestId('shape-shape-1').className).not.toContain('shadow-')
+  })
+
+  it('lifts as it is selected and again as it is moved', () => {
+    const blurOf = (props: { isSelected: boolean; isDragging?: boolean }) => {
+      cleanup()
+      const { container } = render(
+        <ShapeItem
+          element={rectangle}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+          {...props}
+        />
+      )
+      const filter = (container.querySelector('svg') as SVGElement).style.filter
+      return Number(filter.match(/0 \d+px (\d+)px/)![1])
+    }
+
+    const resting = blurOf({ isSelected: false })
+    const selected = blurOf({ isSelected: true })
+    const dragging = blurOf({ isSelected: true, isDragging: true })
+
+    expect(selected).toBeGreaterThan(resting)
+    expect(dragging).toBeGreaterThan(selected)
+  })
 })

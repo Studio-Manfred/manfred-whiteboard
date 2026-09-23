@@ -8,6 +8,7 @@ import {
   fontFamilyStack,
   textPaddingFor,
 } from '../../lib/element-style'
+import { boxShadowClass, elevationFor } from '../../lib/elevation'
 
 interface StickyNoteProps {
   element: StickyElement
@@ -25,6 +26,8 @@ interface StickyNoteProps {
   highlightedAnchor?: AnchorPosition | null
   onResizeStart?: (handle: ResizeHandle, e: React.PointerEvent) => void
   onResizeByKeyboard?: (handle: ResizeHandle, delta: Point) => void
+  /** Lifts the note while it is actually being moved. */
+  isDragging?: boolean
 }
 
 export function StickyNote({
@@ -37,6 +40,7 @@ export function StickyNote({
   onAnchorKeyActivate,
   showAnchors = false,
   highlightedAnchor = null,
+  isDragging = false,
   onResizeStart,
   onResizeByKeyboard,
 }: StickyNoteProps) {
@@ -71,12 +75,14 @@ export function StickyNote({
 
   const anchors: AnchorPosition[] = ['top', 'right', 'bottom', 'left']
   const textPadding = textPaddingFor(element) ?? 0
+  const elevation = boxShadowClass(elevationFor({ isSelected, isDragging }))
 
   return (
     <div
       data-testid={`sticky-${element.id}`}
       className={`absolute z-10 group pointer-events-auto rounded-lg transition-shadow select-none flex flex-col ${
-        isSelected ? 'ring-2 ring-blue-500 shadow-xl' : 'shadow-md hover:shadow-lg'
+        isSelected ? 'ring-2 ring-blue-500' : ''
+      } ${elevation
       }`}
       style={{
         left: `${element.x}px`,

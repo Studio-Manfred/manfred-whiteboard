@@ -74,6 +74,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Shapes had no shadow at all, so they sat flat while notes floated. Notes and shapes now
+  share one elevation model, and a shape's shadow follows its real outline rather than a
+  box around it — a rectangular shadow would be wrong for a circle or a transparent fill.
+- An element only *appeared* to lift while dragging, because it was really showing its
+  selected shadow: there was no drag state in React at all. Dragging now lifts an element
+  properly, on the first actual movement rather than on the press, so a plain click to
+  select no longer makes it jump.
+- The selected arrow's glow had never rendered: it was a CSS value passed as a class name,
+  which Tailwind generates nothing for.
+
 - Text in a shape sat against its border, and a thick border made it worse, because the
   stroke is drawn half inside the bounds. Notes and shapes now share one padding rule,
   and a shape's inset grows with its border thickness. The SVG export follows the same

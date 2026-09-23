@@ -1180,4 +1180,39 @@ describe('App', () => {
       expect(text.style.textAlign).toBe('center')
     })
   })
+
+  it('lifts a note while it is being dragged, and sets it down afterwards', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    const note = () => stickies()[0] as HTMLElement
+
+    fireEvent.pointerDown(note(), { clientX: 400, clientY: 300 })
+    expect(note().className).not.toContain('shadow-2xl')
+
+    fireEvent.pointerMove(canvas(), { clientX: 450, clientY: 340 })
+    expect(note().className).toContain('shadow-2xl')
+
+    fireEvent.pointerUp(canvas(), { clientX: 450, clientY: 340 })
+    expect(note().className).not.toContain('shadow-2xl')
+  })
+
+  it('lifts every member of a dragged selection', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(800, 300)
+
+    fireEvent.pointerDown(canvas(), { clientX: 120, clientY: 120 })
+    fireEvent.pointerMove(canvas(), { clientX: 1000, clientY: 500 })
+    fireEvent.pointerUp(canvas(), { clientX: 1000, clientY: 500 })
+
+    fireEvent.pointerDown(stickies()[0], { clientX: 300, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 320, clientY: 300 })
+
+    Array.from(stickies()).forEach((note) =>
+      expect(note.className).toContain('shadow-2xl')
+    )
+  })
 })

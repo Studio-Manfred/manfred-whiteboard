@@ -364,4 +364,44 @@ describe('StickyNote Component', () => {
 
     expect(screen.getByTestId('sticky-sticky-1')).toHaveStyle({ padding: '16px' })
   })
+  it('lifts further while being moved than when merely selected', () => {
+    const { rerender } = render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={true}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+    const selected = screen.getByTestId('sticky-sticky-1').className
+
+    rerender(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={true}
+        isDragging={true}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    expect(selected).toContain('shadow-xl')
+    expect(screen.getByTestId('sticky-sticky-1').className).toContain('shadow-2xl')
+  })
+
+  it('rests with a shadow when it is neither selected nor moving', () => {
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('sticky-sticky-1').className).toContain('shadow-md')
+  })
 })
