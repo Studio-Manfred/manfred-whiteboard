@@ -9,7 +9,12 @@
 
 import { getAnchorPosition, calculateBezierPath } from './connector-math'
 import { pointsToSmoothPath } from './stroke-path'
-import { arrowheadsOf, effectiveTextAlign, fontFamilyStack } from './element-style'
+import {
+  arrowheadsOf,
+  effectiveTextAlign,
+  fontFamilyStack,
+  textPaddingFor,
+} from './element-style'
 import type { Rect } from './marquee'
 import type {
   TextAlign,
@@ -23,8 +28,6 @@ import type {
 /** Breathing room around the outermost elements. */
 export const EXPORT_PADDING = 40
 const EMPTY_BOARD = { width: 640, height: 480 }
-const STICKY_TEXT_PADDING = 16
-const SHAPE_TEXT_PADDING = 8
 const LINE_HEIGHT = 1.35
 /** Rough average glyph width relative to font size — enough to wrap sensibly. */
 const GLYPH_RATIO = 0.55
@@ -107,15 +110,16 @@ function textXFor(align: TextAlign, left: number, width: number, padding: number
 
 function stickySvg(el: StickyElement): string {
   const fontSize = el.fontSize || 16
-  const lines = el.text ? wrapText(el.text, el.width - STICKY_TEXT_PADDING * 2, fontSize) : []
+  const padding = textPaddingFor(el) ?? 0
+  const lines = el.text ? wrapText(el.text, el.width - padding * 2, fontSize) : []
   const lineHeight = fontSize * LINE_HEIGHT
 
   const align = effectiveTextAlign(el) ?? 'left'
-  const textX = textXFor(align, el.x, el.width, STICKY_TEXT_PADDING)
+  const textX = textXFor(align, el.x, el.width, padding)
 
   const tspans = lines
     .map((line, i) => {
-      const y = el.y + STICKY_TEXT_PADDING + fontSize + i * lineHeight
+      const y = el.y + padding + fontSize + i * lineHeight
       return `<tspan x="${textX}" y="${y}">${escapeXml(line)}</tspan>`
     })
     .join('')
@@ -156,7 +160,7 @@ function shapeLabelSvg(el: ShapeElement): string {
 
   const fontSize = el.fontSize || 14
   const align = effectiveTextAlign(el) ?? 'center'
-  const x = textXFor(align, el.x, el.width, SHAPE_TEXT_PADDING)
+  const x = textXFor(align, el.x, el.width, textPaddingFor(el) ?? 0)
 
   return (
     `<text x="${x}" y="${el.y + el.height / 2 + fontSize / 3}" ` +

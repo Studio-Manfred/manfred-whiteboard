@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ShapeItem } from '../src/components/Canvas/ShapeItem'
 import type { ShapeElement } from '../src/types/whiteboard'
 
@@ -281,5 +281,40 @@ describe('ShapeItem', () => {
     expect(
       screen.getByRole('button', { name: 'Connect from top anchor' })
     ).not.toHaveAttribute('data-snap-target')
+  })
+  it('keeps its label off the border', () => {
+    render(
+      <ShapeItem
+        element={{ ...rectangle, text: 'Label' }}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    const wrapper = screen.getByText('Label').parentElement as HTMLElement
+    expect(parseFloat(wrapper.style.paddingLeft)).toBeGreaterThan(8)
+  })
+
+  it('pushes the label further in as the border thickens', () => {
+    const paddingFor = (strokeWidth: number) => {
+      cleanup()
+      render(
+        <ShapeItem
+          element={{ ...rectangle, text: 'Label', strokeWidth }}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+        />
+      )
+      const wrapper = screen.getByText('Label').parentElement as HTMLElement
+      return parseFloat(wrapper.style.paddingLeft)
+    }
+
+    // The stroke is drawn half inside the shape, so a thick border would
+    // otherwise crowd the text against the edge.
+    expect(paddingFor(16)).toBeGreaterThan(paddingFor(2))
   })
 })

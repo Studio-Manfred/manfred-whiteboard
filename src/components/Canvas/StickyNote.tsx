@@ -3,7 +3,11 @@ import type { StickyElement, AnchorPosition } from '../../types/whiteboard'
 import { ResizeHandles } from './ResizeHandles'
 import type { ResizeHandle } from '../../lib/resize'
 import type { Point } from '../../lib/coordinates'
-import { effectiveTextAlign, fontFamilyStack } from '../../lib/element-style'
+import {
+  effectiveTextAlign,
+  fontFamilyStack,
+  textPaddingFor,
+} from '../../lib/element-style'
 
 interface StickyNoteProps {
   element: StickyElement
@@ -66,11 +70,12 @@ export function StickyNote({
   }
 
   const anchors: AnchorPosition[] = ['top', 'right', 'bottom', 'left']
+  const textPadding = textPaddingFor(element) ?? 0
 
   return (
     <div
       data-testid={`sticky-${element.id}`}
-      className={`absolute z-10 group pointer-events-auto rounded-lg transition-shadow select-none flex flex-col p-4 ${
+      className={`absolute z-10 group pointer-events-auto rounded-lg transition-shadow select-none flex flex-col ${
         isSelected ? 'ring-2 ring-blue-500 shadow-xl' : 'shadow-md hover:shadow-lg'
       }`}
       style={{
@@ -79,6 +84,7 @@ export function StickyNote({
         width: `${element.width}px`,
         height: `${element.height}px`,
         backgroundColor: element.color,
+        padding: `${textPadding}px`,
       }}
       onPointerDown={(e) => {
         if (!isEditing) {

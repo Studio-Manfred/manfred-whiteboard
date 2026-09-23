@@ -92,6 +92,22 @@ export const TEXT_ALIGNS: ReadonlyArray<{ value: TextAlign; label: string }> = [
   { value: 'right', label: 'Align right' },
 ]
 
+/** Base inset between an element's edge and its text. */
+export const TEXT_PADDING = { sticky: 16, shape: 12 } as const
+
+/**
+ * How far text sits from an element's edge.
+ *
+ * A shape's stroke is drawn centred on its bounds, so half of it falls inside:
+ * a thick border would otherwise crowd the label against the edge. The inset
+ * grows with the border instead.
+ */
+export function textPaddingFor(element: BoardElement): number | null {
+  if (element.type === 'sticky') return TEXT_PADDING.sticky
+  if (element.type === 'shape') return TEXT_PADDING.shape + (element.strokeWidth ?? 2) / 2
+  return null
+}
+
 /** How each type has always looked, so existing boards are unchanged. */
 const DEFAULT_TEXT_ALIGNS = { sticky: 'left', shape: 'center' } as const
 

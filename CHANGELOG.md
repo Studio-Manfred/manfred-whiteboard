@@ -74,6 +74,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Text in a shape sat against its border, and a thick border made it worse, because the
+  stroke is drawn half inside the bounds. Notes and shapes now share one padding rule,
+  and a shape's inset grows with its border thickness. The SVG export follows the same
+  rule, where it previously used a constant of its own.
+
 - On-screen stacking ignored `zIndex` entirely: notes were painted as one group above
   shapes as another, so a shape could never sit above a note, while hit-testing and the
   SVG export both read `zIndex`. The eraser could therefore delete something other than

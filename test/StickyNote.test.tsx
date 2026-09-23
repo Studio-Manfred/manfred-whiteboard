@@ -351,4 +351,17 @@ describe('StickyNote Component', () => {
     expect(text).toHaveStyle({ fontSize: '24px' })
     expect(text.style.fontFamily).toMatch(/serif/)
   })
+  it('keeps its text off the edge', () => {
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('sticky-sticky-1')).toHaveStyle({ padding: '16px' })
+  })
 })
