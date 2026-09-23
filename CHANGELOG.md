@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Freehand strokes are full objects: they resize by their handles (scaling the ink, not
+  just its bounding box) and take part in stack order alongside notes and shapes. Colour
+  and thickness already worked (STU-871).
+
 - Pen-like ink: freehand strokes thicken when drawn slowly and thin when drawn fast, via
   `perfect-freehand`. A stylus's real pressure is used where reported, and simulated from
   velocity otherwise. Strokes drawn before this keep their uniform width (STU-870).
@@ -77,6 +81,10 @@ All notable changes to this project are documented here. The format follows
   build rather than printing a warning.
 
 ### Fixed
+
+- Resize handles were unclickable inside layers that disable pointer events, so resizing a
+  freehand stroke did nothing and silently deselected it. The handles now re-enable pointer
+  events for themselves.
 
 - Shapes had no shadow at all, so they sat flat while notes floated. Notes and shapes now
   share one elevation model, and a shape's shadow follows its real outline rather than a

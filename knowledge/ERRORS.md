@@ -137,6 +137,12 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
   arrow's glow had never once rendered. Second instance of the same mistake in two weeks —
   a CSS value written where a utility class was expected. **Anything with parentheses or
   spaces in it is a style, not a class.**
+- **Third instance 2026-09-23** (STU-871): resize handles rendered inside the canvas
+  world container were unclickable, because that container sets `pointer-events: none` and
+  the handles never re-enabled it for themselves. The click fell through to the canvas and
+  started a marquee, which then cleared the selection — so a resize appeared to do nothing
+  *and* deselected the element. Every jsdom test passed. **When adding controls to a layer,
+  check what that layer does to pointer events.**
 - **Graduated to:** candidate for `my-process/docs/knowledge/` alongside the
   PointerEvent entry — together they say "jsdom does not do layout, so test anything
   spatial in a real browser."

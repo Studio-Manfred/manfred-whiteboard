@@ -71,11 +71,14 @@ describe('supportsProperty', () => {
     expect(supportsProperty(ink, 'align')).toBe(false)
   })
 
-  it('offers stack order to notes and shapes, which share a layer', () => {
+  it('offers stack order to every object that shares the stack', () => {
     expect(supportsProperty(note, 'stacking')).toBe(true)
     expect(supportsProperty(shape, 'stacking')).toBe(true)
+    expect(supportsProperty(ink, 'stacking')).toBe(true)
+  })
+
+  it('withholds stack order from arrows, which follow the elements they join', () => {
     expect(supportsProperty(arrow, 'stacking')).toBe(false)
-    expect(supportsProperty(ink, 'stacking')).toBe(false)
   })
 
   it('offers arrowheads to arrows alone', () => {

@@ -5,6 +5,7 @@ import { StickyNote } from './components/Canvas/StickyNote'
 import { ShapeItem } from './components/Canvas/ShapeItem'
 import { ConnectorLayer } from './components/Canvas/ConnectorLayer'
 import { DrawingLayer } from './components/Canvas/DrawingLayer'
+import { DrawingItem } from './components/Canvas/DrawingItem'
 import { MultiplayerCursors } from './components/Canvas/MultiplayerCursors'
 import { SelectionOverlay } from './components/Canvas/SelectionOverlay'
 
@@ -23,7 +24,7 @@ import { partitionElements, findElementAt } from './lib/board-selectors'
 import { elementsInMarquee, rectFromPoints } from './lib/marquee'
 import { boardBounds, boardToJson, boardToSvg } from './lib/board-export'
 import type { InkPoint } from './lib/ink'
-import { resizeRect, type ResizeHandle } from './lib/resize'
+import { resizePatchFor, resizeRect, type ResizeHandle } from './lib/resize'
 import { findSnapTarget, type AnchorCandidate } from './lib/connector-drag'
 import { getAnchorPosition } from './lib/connector-math'
 import { boardFilename, downloadBlob, svgToPngBlob } from './lib/download'
@@ -281,13 +282,16 @@ export default function App() {
         const conn = connectionRef.current
         if (!conn) return
 
+        const element = elements.get(elementId)
+        if (!element) return
+
         const next = resizeRect(
           startRect,
           handle,
           { x: worldPoint.x - startWorld.x, y: worldPoint.y - startWorld.y },
           { preserveAspectRatio: e.shiftKey }
         )
-        patchElement(conn, elementId, next)
+        patchElement(conn, elementId, resizePatchFor(element, next))
         return
       }
 
@@ -493,7 +497,7 @@ export default function App() {
         handle,
         delta
       )
-      patchElement(conn, id, next)
+      patchElement(conn, id, resizePatchFor(el, next))
     },
     [elements]
   )
@@ -602,11 +606,9 @@ export default function App() {
       const conn = connectionRef.current
       if (!conn) return
 
-      // Only notes and shapes share a layer, so only they take part.
+      // Whatever shares the stack takes part — everything but arrows.
       const stackable = new Map(
-        Array.from(elements).filter(
-          ([, el]) => el.type === 'sticky' || el.type === 'shape'
-        )
+        Array.from(elements).filter(([, el]) => supportsProperty(el, 'stacking'))
       )
       // Compare the order, not the numbers: zIndex values are renumbered to
       // positions, so a command that moves nothing would still look like a
@@ -663,8 +665,8 @@ export default function App() {
 
   // ----------- Derived element lists -----------
   const { stickies, shapes, connectors, drawings } = partitionElements(elements)
-  // One list so a shape can sit above a note, and vice versa.
-  const stackedElements = [...shapes, ...stickies].sort(
+  // One list, so any object can sit above any other whatever its type.
+  const stackedElements = [...shapes, ...stickies, ...drawings].sort(
     (a, b) => a.zIndex - b.zIndex || a.createdAt - b.createdAt
   )
 
@@ -686,15 +688,8 @@ export default function App() {
         onCanvasPointerMove={handleCanvasPointerMove}
         onCanvasPointerUp={handleCanvasPointerUp}
       >
-        {/* Drawing layer (behind everything) */}
-        <DrawingLayer
-          drawings={drawings}
-          activePoints={drawingPoints}
-          activeColor="#0f172a"
-          activeWidth={3}
-          selectedIds={selectedIds}
-          onSelect={(id, e) => handleElementSelect(id, e)}
-        />
+        {/* The stroke currently being drawn; committed ones are in the stack */}
+        <DrawingLayer activePoints={drawingPoints} activeColor="#0f172a" activeWidth={3} />
 
         {/* Connector layer */}
         <ConnectorLayer
@@ -707,7 +702,20 @@ export default function App() {
 
         {/* Notes and shapes, painted back to front so stack order is what you see */}
         {stackedElements.map((element) =>
-          element.type === 'sticky' ? (
+          element.type === 'drawing' ? (
+            <DrawingItem
+              key={element.id}
+              element={element}
+              isSelected={selectedIds.has(element.id)}
+              isDragging={draggingIds.has(element.id)}
+              onSelect={(e) => handleElementSelect(element.id, e)}
+              onDragStart={(e) => handleDragStart(element.id, pointerWorld(e), e)}
+              onResizeStart={(handle, e) => handleResizeStart(element.id, handle, e)}
+              onResizeByKeyboard={(handle, delta) =>
+                handleResizeByKeyboard(element.id, handle, delta)
+              }
+            />
+          ) : element.type === 'sticky' ? (
             <StickyNote
               key={element.id}
               element={element}

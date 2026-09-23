@@ -107,6 +107,11 @@ draw a flat line. The thickness control sets the stroke's base weight.
 Strokes drawn before the pen existed keep their original uniform width: they carry no
 speed data, so there is nothing to vary.
 
+A stroke is a full object like any other: select it to recolour it, change its thickness,
+resize it by its handles — which scales the ink itself, not just its box — and move it up
+or down the stack. Arrows are the exception: they follow the elements they join, so they
+stay on their own layer.
+
 ## Drawing arrows
 
 Hover a note or shape and four blue dots appear on its edges. Press one and drag: a

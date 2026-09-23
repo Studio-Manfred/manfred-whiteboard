@@ -1215,4 +1215,87 @@ describe('App', () => {
       expect(note.className).toContain('shadow-2xl')
     )
   })
+
+  function drawStroke(fromX: number, toX: number, y: number) {
+    pickTool('Pen')
+    fireEvent.pointerDown(canvas(), { clientX: fromX, clientY: y })
+    fireEvent.pointerMove(canvas(), { clientX: (fromX + toX) / 2, clientY: y + 30 })
+    fireEvent.pointerMove(canvas(), { clientX: toX, clientY: y })
+    fireEvent.pointerUp(canvas(), { clientX: toX, clientY: y })
+    pickTool('Select')
+  }
+
+  function ink() {
+    return document.querySelectorAll('[data-testid^="drawing-"]')
+  }
+
+  it('selects a stroke and offers it resize handles', () => {
+    render(<App />)
+    drawStroke(200, 400, 300)
+
+    const hitArea = ink()[0].querySelectorAll('path')[0]
+    fireEvent.pointerDown(hitArea, { clientX: 300, clientY: 315 })
+
+    expect(screen.getAllByRole('button', { name: /^Resize from/ })).toHaveLength(8)
+  })
+
+  it('scales a stroke when it is resized', () => {
+    render(<App />)
+    drawStroke(200, 400, 300)
+    fireEvent.pointerDown(ink()[0].querySelectorAll('path')[0], { clientX: 300, clientY: 315 })
+
+    const pathBefore = ink()[0].querySelector('path')!.getAttribute('d')
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize from right edge' }), {
+      key: 'ArrowRight',
+      shiftKey: true,
+    })
+
+    // The stroke itself is redrawn, not just its box.
+    expect(ink()[0].querySelector('path')!.getAttribute('d')).not.toBe(pathBefore)
+  })
+
+  it('offers a stroke the stack controls', () => {
+    render(<App />)
+    drawStroke(200, 400, 300)
+    fireEvent.pointerDown(ink()[0].querySelectorAll('path')[0], { clientX: 300, clientY: 315 })
+
+    expect(screen.getByRole('button', { name: 'Stack order' })).toBeInTheDocument()
+  })
+
+  it('stacks a stroke among notes and shapes', () => {
+    render(<App />)
+    drawStroke(200, 400, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(300, 320)
+
+    const order = () =>
+      Array.from(
+        document.querySelectorAll(
+          '[data-testid^="sticky-"], [data-testid^="shape-"], [data-testid^="drawing-"]'
+        )
+      ).map((el) => el.getAttribute('data-testid'))
+
+    // The note was made last, so it is on top of the stroke.
+    const strokeId = order().find((id) => id!.startsWith('drawing-'))
+    expect(order()[1]).not.toBe(strokeId)
+
+    fireEvent.pointerDown(ink()[0].querySelectorAll('path')[0], { clientX: 300, clientY: 315 })
+    openBarControl('Stack order')
+    fireEvent.click(screen.getByRole('button', { name: 'Bring to front' }))
+
+    expect(order()[1]).toBe(strokeId)
+  })
+
+  it('recolours a stroke', () => {
+    render(<App />)
+    drawStroke(200, 400, 300)
+    fireEvent.pointerDown(ink()[0].querySelectorAll('path')[0], { clientX: 300, clientY: 315 })
+
+    openBarControl('Line colour')
+    fireEvent.click(screen.getByRole('button', { name: 'Red' }))
+    // Deselect, since a selected stroke is drawn in the selection colour.
+    clickCanvasAt(50, 50)
+
+    expect(ink()[0].querySelector('[data-ink="pen"]')!.getAttribute('fill')).toBe('#dc2626')
+  })
 })
