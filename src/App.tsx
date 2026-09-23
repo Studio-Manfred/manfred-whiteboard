@@ -24,6 +24,7 @@ import { partitionElements, findElementAt } from './lib/board-selectors'
 import { elementsInMarquee, rectFromPoints } from './lib/marquee'
 import { boardBounds, boardToJson, boardToSvg } from './lib/board-export'
 import type { InkPoint } from './lib/ink'
+import { translatePoints } from './lib/scale-points'
 import { resizePatchFor, resizeRect, type ResizeHandle } from './lib/resize'
 import { findSnapTarget, type AnchorCandidate } from './lib/connector-drag'
 import { getAnchorPosition } from './lib/connector-math'
@@ -78,8 +79,12 @@ export default function App() {
   // Drag state
   const dragState = useRef<{
     startWorld: Point
-    /** Where each dragged element started, so a group keeps its shape. */
-    origins: Map<string, Point>
+    /**
+     * Where each dragged element started, so a group keeps its shape. A
+     * stroke's points travel with it: they are world coordinates, and its svg
+     * viewBox follows its box, so moving the box alone cancels out.
+     */
+    origins: Map<string, { x: number; y: number; points?: InkPoint[] }>
   } | null>(null)
 
   /** Ids currently being moved, so they can be shown lifted. */
@@ -329,7 +334,11 @@ export default function App() {
         // One transaction so a group move is a single undo step.
         conn.doc.transact(() => {
           origins.forEach((origin, id) => {
-            patchElement(conn, id, { x: origin.x + dx, y: origin.y + dy })
+            patchElement(conn, id, {
+              x: origin.x + dx,
+              y: origin.y + dy,
+              ...(origin.points ? { points: translatePoints(origin.points, dx, dy) } : {}),
+            } as Partial<BoardElement>)
           })
         })
       }
@@ -414,10 +423,16 @@ export default function App() {
       // Dragging a member of a selection moves the whole selection; dragging
       // anything else moves just that element.
       const group = selectedIds.has(id) ? selectedIds : new Set([id])
-      const origins = new Map<string, Point>()
+      const origins = new Map<string, { x: number; y: number; points?: InkPoint[] }>()
       group.forEach((memberId) => {
         const member = elements.get(memberId)
-        if (member) origins.set(memberId, { x: member.x, y: member.y })
+        if (!member) return
+
+        origins.set(memberId, {
+          x: member.x,
+          y: member.y,
+          ...(member.type === 'drawing' ? { points: member.points } : {}),
+        })
       })
 
       dragState.current = { startWorld: worldPoint, origins }

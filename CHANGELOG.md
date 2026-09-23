@@ -82,6 +82,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A freehand stroke could be selected and resized but not moved: its points are world
+  coordinates and its SVG `viewBox` follows its bounding box, so moving the box shifted
+  both by the same amount and cancelled out — the box walked away while the ink stayed
+  put. Moving a stroke now carries its points with it (STU-872).
+
 - Resize handles were unclickable inside layers that disable pointer events, so resizing a
   freehand stroke did nothing and silently deselected it. The handles now re-enable pointer
   events for themselves.

@@ -27,3 +27,19 @@ export function scalePoints(
     y: rescale(point.y, from.y, from.height, to.y, to.height),
   }))
 }
+
+/**
+ * The stroke's points, moved by an offset.
+ *
+ * A drawing's points are world coordinates and its svg viewBox follows its
+ * box, so moving the box alone shifts both by the same amount and the ink
+ * never appears to move. The points have to travel with it.
+ */
+export function translatePoints(
+  points: readonly InkPoint[],
+  dx: number,
+  dy: number
+): InkPoint[] {
+  return points.map((point) => ({ ...point, x: point.x + dx, y: point.y + dy }))
+}
+
