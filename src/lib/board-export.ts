@@ -9,9 +9,10 @@
 
 import { getAnchorPosition, calculateBezierPath } from './connector-math'
 import { pointsToSmoothPath } from './stroke-path'
-import { arrowheadsOf, fontFamilyStack } from './element-style'
+import { arrowheadsOf, effectiveTextAlign, fontFamilyStack } from './element-style'
 import type { Rect } from './marquee'
 import type {
+  TextAlign,
   BoardElement,
   ConnectorElement,
   DrawingElement,
@@ -23,6 +24,7 @@ import type {
 export const EXPORT_PADDING = 40
 const EMPTY_BOARD = { width: 640, height: 480 }
 const STICKY_TEXT_PADDING = 16
+const SHAPE_TEXT_PADDING = 8
 const LINE_HEIGHT = 1.35
 /** Rough average glyph width relative to font size — enough to wrap sensibly. */
 const GLYPH_RATIO = 0.55
@@ -90,15 +92,31 @@ function wrapText(text: string, width: number, fontSize: number): string[] {
   })
 }
 
+/** SVG has no text alignment: the anchor and the x both have to move. */
+function textAnchorFor(align: TextAlign): string {
+  if (align === 'center') return 'middle'
+  if (align === 'right') return 'end'
+  return 'start'
+}
+
+function textXFor(align: TextAlign, left: number, width: number, padding: number): number {
+  if (align === 'center') return left + width / 2
+  if (align === 'right') return left + width - padding
+  return left + padding
+}
+
 function stickySvg(el: StickyElement): string {
   const fontSize = el.fontSize || 16
   const lines = el.text ? wrapText(el.text, el.width - STICKY_TEXT_PADDING * 2, fontSize) : []
   const lineHeight = fontSize * LINE_HEIGHT
 
+  const align = effectiveTextAlign(el) ?? 'left'
+  const textX = textXFor(align, el.x, el.width, STICKY_TEXT_PADDING)
+
   const tspans = lines
     .map((line, i) => {
       const y = el.y + STICKY_TEXT_PADDING + fontSize + i * lineHeight
-      return `<tspan x="${el.x + STICKY_TEXT_PADDING}" y="${y}">${escapeXml(line)}</tspan>`
+      return `<tspan x="${textX}" y="${y}">${escapeXml(line)}</tspan>`
     })
     .join('')
 
@@ -107,7 +125,8 @@ function stickySvg(el: StickyElement): string {
     `fill="${el.color}" />` +
     (tspans
       ? `<text font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
-        `font-size="${fontSize}" fill="#1e293b">${tspans}</text>`
+        `font-size="${fontSize}" text-anchor="${textAnchorFor(align)}" ` +
+        `fill="#1e293b">${tspans}</text>`
       : '')
   )
 }
@@ -136,9 +155,13 @@ function shapeLabelSvg(el: ShapeElement): string {
   if (!el.text) return ''
 
   const fontSize = el.fontSize || 14
+  const align = effectiveTextAlign(el) ?? 'center'
+  const x = textXFor(align, el.x, el.width, SHAPE_TEXT_PADDING)
+
   return (
-    `<text x="${el.x + el.width / 2}" y="${el.y + el.height / 2 + fontSize / 3}" ` +
-    `text-anchor="middle" font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
+    `<text x="${x}" y="${el.y + el.height / 2 + fontSize / 3}" ` +
+    `text-anchor="${textAnchorFor(align)}" ` +
+    `font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
     `font-size="${fontSize}" fill="#1e293b">${escapeXml(el.text)}</text>`
   )
 }

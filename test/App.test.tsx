@@ -1128,4 +1128,56 @@ describe('App', () => {
 
     expect(transactions).toBe(0)
   })
+
+  it('aligns a note text and its editor', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    selectNote()
+
+    openBarControl('Text alignment')
+    fireEvent.click(screen.getByRole('button', { name: 'Align right' }))
+
+    const text = stickies()[0].querySelector('div > div') as HTMLElement
+    expect(text.style.textAlign).toBe('right')
+
+    // The editor has to follow, not just the rendered text.
+    fireEvent.doubleClick(stickies()[0])
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).style.textAlign).toBe('right')
+  })
+
+  it('leaves a note left-aligned until asked otherwise', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+
+    const text = stickies()[0].querySelector('div > div') as HTMLElement
+    expect(text.style.textAlign).toBe('left')
+  })
+
+  it('aligns a whole selection in one undo step', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(800, 300)
+
+    fireEvent.pointerDown(canvas(), { clientX: 120, clientY: 120 })
+    fireEvent.pointerMove(canvas(), { clientX: 1000, clientY: 500 })
+    fireEvent.pointerUp(canvas(), { clientX: 1000, clientY: 500 })
+
+    let transactions = 0
+    board.doc.on('afterTransaction', () => {
+      transactions += 1
+    })
+
+    openBarControl('Text alignment')
+    fireEvent.click(screen.getByRole('button', { name: 'Align centre' }))
+
+    expect(transactions).toBe(1)
+    Array.from(stickies()).forEach((note) => {
+      const text = note.querySelector('div > div') as HTMLElement
+      expect(text.style.textAlign).toBe('center')
+    })
+  })
 })

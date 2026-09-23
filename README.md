@@ -70,8 +70,8 @@ Select something and a small bar floats beside it, carrying only the controls th
 
 | Selection | Controls |
 | --- | --- |
-| Sticky note | Fill, text size, font, stack order |
-| Shape | Fill, border colour, thickness, text size, font, stack order |
+| Sticky note | Fill, text size, font, alignment, stack order |
+| Shape | Fill, border colour, thickness, text size, font, alignment, stack order |
 | Arrow | Line colour, thickness, arrowheads — none, start, end or both |
 | Ink | Line colour, thickness |
 
@@ -88,7 +88,9 @@ The bar sits above the selection, flipping below when there is no room, and its 
 open away from the selection so they never cover what you are restyling. It is a single
 tab stop with arrow-key navigation, like the main toolbar.
 
-Fonts are the three that need no download — sans, serif and mono. The last fill you apply
+Text can be aligned left, centre or right; left is how a note has always looked and
+centre how a shape label has, so nothing on an existing board moves. Fonts are the three
+that need no download — sans, serif and mono. The last fill you apply
 becomes the colour of the next sticky note.
 
 ## Drawing arrows

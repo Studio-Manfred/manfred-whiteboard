@@ -3,7 +3,7 @@ import type { ShapeElement, AnchorPosition } from '../../types/whiteboard'
 import { ResizeHandles } from './ResizeHandles'
 import type { ResizeHandle } from '../../lib/resize'
 import type { Point } from '../../lib/coordinates'
-import { fontFamilyStack } from '../../lib/element-style'
+import { effectiveTextAlign, fontFamilyStack } from '../../lib/element-style'
 
 interface ShapeItemProps {
   element: ShapeElement
@@ -109,7 +109,7 @@ export function ShapeItem({
       </svg>
 
       {/* Centered label or input */}
-      <div className="relative z-20 px-2 text-center max-w-full">
+      <div className="relative z-20 px-2 w-full">
         {isEditing ? (
           <input
             ref={inputRef}
@@ -125,16 +125,18 @@ export function ShapeItem({
             style={{
               fontSize: `${element.fontSize || 14}px`,
               fontFamily: fontFamilyStack(element.fontFamily),
+              textAlign: effectiveTextAlign(element) ?? 'center',
             }}
-            className="w-full bg-transparent text-center outline-none font-medium text-slate-800"
+            className="w-full bg-transparent outline-none font-medium text-slate-800"
           />
         ) : (
           <span
             style={{
               fontSize: `${element.fontSize || 14}px`,
               fontFamily: fontFamilyStack(element.fontFamily),
+              textAlign: effectiveTextAlign(element) ?? 'center',
             }}
-            className="text-slate-800 font-medium break-words"
+            className="block w-full text-slate-800 font-medium break-words"
           >
             {element.text}
           </span>
