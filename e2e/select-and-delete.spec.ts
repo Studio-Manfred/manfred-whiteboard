@@ -70,7 +70,8 @@ test('a pen stroke can be clicked, then deleted', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Select' }).click()
   await page.mouse.click(195, 200)
-  await expect(drawing.locator('path').nth(1)).toHaveAttribute('stroke', '#3b82f6')
+  // Pen ink is a filled outline, so selection shows in its fill.
+  await expect(drawing.locator('[data-ink="pen"]')).toHaveAttribute('fill', '#3b82f6')
 
   await page.keyboard.press('Delete')
 

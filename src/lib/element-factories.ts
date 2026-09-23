@@ -6,6 +6,7 @@
  */
 
 import type { Point } from './coordinates'
+import type { InkPoint } from './ink'
 import {
   PASTEL_COLORS,
   type AnchorPosition,
@@ -112,16 +113,18 @@ export function strokeBounds(points: readonly Point[]): {
 
 /** A committed freehand stroke, sized to its own bounds. */
 export function createDrawingElement(
-  points: readonly Point[],
+  points: readonly InkPoint[],
   options: FactoryOptions
 ): DrawingElement {
   return {
     ...base(options),
     ...strokeBounds(points),
     type: 'drawing',
-    points: points.map((p) => ({ x: p.x, y: p.y })),
+    // Pressure is kept only where a device reported one.
+    points: points.map((p) => ({ x: p.x, y: p.y, ...(p.p === undefined ? {} : { p: p.p }) })),
     strokeColor: DEFAULT_STROKE,
     strokeWidth: 3,
+    ink: 'pen',
   }
 }
 
