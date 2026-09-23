@@ -3,7 +3,12 @@
  * common — the model behind the floating properties bar.
  */
 
-import type { BoardElement, ConnectorElement, FontFamily } from '../types/whiteboard'
+import type {
+  BoardElement,
+  ConnectorElement,
+  FontFamily,
+  TextAlign,
+} from '../types/whiteboard'
 
 /** A control the properties bar can offer. */
 export type StyleProperty =
@@ -14,6 +19,7 @@ export type StyleProperty =
   | 'font'
   | 'arrowheads'
   | 'stacking'
+  | 'align'
 
 export type Arrowheads = 'none' | 'start' | 'end' | 'both'
 
@@ -49,6 +55,7 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
     case 'thickness':
       return element.type === 'connector' || element.type === 'drawing'
     case 'font':
+    case 'align':
       return element.type === 'sticky' || element.type === 'shape'
     case 'arrowheads':
       return element.type === 'connector'
@@ -77,6 +84,22 @@ export function sharedValue<T>(
 
   const [first, ...rest] = values
   return rest.every((value) => value === first) ? (first as T) : null
+}
+
+export const TEXT_ALIGNS: ReadonlyArray<{ value: TextAlign; label: string }> = [
+  { value: 'left', label: 'Align left' },
+  { value: 'center', label: 'Align centre' },
+  { value: 'right', label: 'Align right' },
+]
+
+/** How each type has always looked, so existing boards are unchanged. */
+const DEFAULT_TEXT_ALIGNS = { sticky: 'left', shape: 'center' } as const
+
+/** The alignment an element's text is actually drawn with. */
+export function effectiveTextAlign(element: BoardElement): TextAlign | null {
+  if (element.type === 'sticky') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.sticky
+  if (element.type === 'shape') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.shape
+  return null
 }
 
 /** The sizes StickyNote and ShapeItem render at when none is set. */

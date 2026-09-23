@@ -3,7 +3,7 @@ import type { StickyElement, AnchorPosition } from '../../types/whiteboard'
 import { ResizeHandles } from './ResizeHandles'
 import type { ResizeHandle } from '../../lib/resize'
 import type { Point } from '../../lib/coordinates'
-import { fontFamilyStack } from '../../lib/element-style'
+import { effectiveTextAlign, fontFamilyStack } from '../../lib/element-style'
 
 interface StickyNoteProps {
   element: StickyElement
@@ -103,6 +103,7 @@ export function StickyNote({
           style={{
             fontSize: `${element.fontSize || 16}px`,
             fontFamily: fontFamilyStack(element.fontFamily),
+            textAlign: effectiveTextAlign(element) ?? 'left',
           }}
         />
       ) : (
@@ -111,6 +112,7 @@ export function StickyNote({
           style={{
             fontSize: `${element.fontSize || 16}px`,
             fontFamily: fontFamilyStack(element.fontFamily),
+            textAlign: effectiveTextAlign(element) ?? 'left',
           }}
         >
           {element.text || (

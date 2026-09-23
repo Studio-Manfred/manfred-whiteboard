@@ -20,12 +20,15 @@ export interface BaseElement {
 /** Families that need no webfont download. */
 export type FontFamily = 'sans' | 'serif' | 'mono'
 
+export type TextAlign = 'left' | 'center' | 'right'
+
 export interface StickyElement extends BaseElement {
   type: 'sticky'
   text: string
   color: string
   fontSize: number
   fontFamily?: FontFamily
+  textAlign?: TextAlign
 }
 
 export interface ShapeElement extends BaseElement {
@@ -37,6 +40,7 @@ export interface ShapeElement extends BaseElement {
   text?: string
   fontSize?: number
   fontFamily?: FontFamily
+  textAlign?: TextAlign
 }
 
 export interface FrameElement extends BaseElement {

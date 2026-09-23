@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
-import { Layers, Minus } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, Layers, Minus } from 'lucide-react'
 import { useRovingTabindex } from '../../hooks/useRovingTabindex'
 import { BarPopover } from './BarPopover'
 import {
@@ -11,6 +11,8 @@ import {
 } from '../../lib/element-colors'
 import {
   effectiveFontSize,
+  effectiveTextAlign,
+  TEXT_ALIGNS,
   FONT_FAMILIES,
   FONT_SIZES,
   STROKE_WIDTHS,
@@ -26,7 +28,12 @@ import { useWindowSize } from '../../hooks/useWindowSize'
 import type { Rect } from '../../lib/marquee'
 import type { Viewport } from '../../lib/coordinates'
 import type { StackCommand } from '../../lib/stacking'
-import type { BoardElement, ConnectorElement, FontFamily } from '../../types/whiteboard'
+import type {
+  BoardElement,
+  ConnectorElement,
+  FontFamily,
+  TextAlign,
+} from '../../types/whiteboard'
 
 const ARROWHEAD_OPTIONS: ReadonlyArray<{ value: Arrowheads; label: string; glyph: string }> = [
   { value: 'none', label: 'No arrowheads', glyph: '—' },
@@ -37,6 +44,12 @@ const ARROWHEAD_OPTIONS: ReadonlyArray<{ value: Arrowheads; label: string; glyph
 
 /** Used until the bar has measured itself — one layout pass, before paint. */
 const ESTIMATED_SIZE = { width: 220, height: 44 }
+
+const ALIGN_ICONS: Record<TextAlign, typeof AlignLeft> = {
+  left: AlignLeft,
+  center: AlignCenter,
+  right: AlignRight,
+}
 
 const STACK_OPTIONS: ReadonlyArray<{ value: StackCommand; label: string }> = [
   { value: 'front', label: 'Bring to front' },
@@ -57,6 +70,7 @@ export interface PropertiesBarProps {
   onFontFamilyChange: (family: FontFamily) => void
   onArrowheadsChange: (choice: Arrowheads) => void
   onStackChange: (command: StackCommand) => void
+  onTextAlignChange: (align: TextAlign) => void
 }
 
 function Swatch({
@@ -136,6 +150,7 @@ export function PropertiesBar({
   onFontFamilyChange,
   onArrowheadsChange,
   onStackChange,
+  onTextAlignChange,
 }: PropertiesBarProps) {
   // The bar's width depends on how many controls the selection needs, so it
   // has to measure itself to sit centred over that selection.
@@ -147,7 +162,16 @@ export function PropertiesBar({
     selection.some((el) => supportsProperty(el, property))
 
   const controls: StyleProperty[] = (
-    ['fill', 'border', 'stroke', 'thickness', 'font', 'arrowheads', 'stacking'] as StyleProperty[]
+    [
+      'fill',
+      'border',
+      'stroke',
+      'thickness',
+      'font',
+      'align',
+      'arrowheads',
+      'stacking',
+    ] as StyleProperty[]
   ).filter(has)
   // 'font' contributes two controls: size and family.
   const itemCount = controls.length + (has('font') ? 1 : 0)
@@ -176,6 +200,13 @@ export function PropertiesBar({
       ? fontSizes[0]
       : null
   const currentFontFamily = sharedValue<FontFamily>(selection, 'fontFamily') ?? 'sans'
+  const alignments = selection
+    .map(effectiveTextAlign)
+    .filter((align): align is TextAlign => align !== null)
+  const currentAlign =
+    alignments.length > 0 && alignments.every((align) => align === alignments[0])
+      ? alignments[0]
+      : null
   const arrows = selection.filter(
     (el): el is ConnectorElement => el.type === 'connector'
   )
@@ -395,6 +426,36 @@ export function PropertiesBar({
           )}
         >
           <Layers size={16} strokeWidth={1.8} aria-hidden="true" />
+        </BarPopover>
+      )}
+
+      {has('align') && (
+        <BarPopover
+          label="Text alignment"
+          {...nextItem()}
+          panelPlacement={panelPlacement}
+          renderPanel={(close) => (
+            <OptionList
+              current={currentAlign}
+              options={TEXT_ALIGNS.map(({ value, label }) => {
+                const Icon = ALIGN_ICONS[value]
+                return {
+                  value,
+                  label,
+                  preview: <Icon size={15} strokeWidth={1.8} aria-hidden="true" />,
+                }
+              })}
+              onSelect={(align: TextAlign) => {
+                onTextAlignChange(align)
+                close()
+              }}
+            />
+          )}
+        >
+          {(() => {
+            const Icon = ALIGN_ICONS[currentAlign ?? 'left']
+            return <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
+          })()}
         </BarPopover>
       )}
 

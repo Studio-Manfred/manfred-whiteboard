@@ -15,6 +15,8 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Text alignment — left, centre, right — for notes and shape labels, in the properties
+  bar and carried through to the editors and the SVG export (STU-866).
 - Stack order in the properties bar: bring to front, bring forward, send backward, send to
   back, applied across a selection in one undo step (STU-865).
 - Floating properties bar beside the selection: fill, border colour, thickness, text size

@@ -39,7 +39,7 @@ import {
   supportsProperty,
   type Arrowheads,
 } from './lib/element-style'
-import type { FontFamily } from './types/whiteboard'
+import type { FontFamily, TextAlign } from './types/whiteboard'
 import type {
   BoardElement,
   UserAwareness,
@@ -568,6 +568,14 @@ export default function App() {
     [patchSelection]
   )
 
+  const handleTextAlignChange = useCallback(
+    (textAlign: TextAlign) =>
+      patchSelection((el) =>
+        supportsProperty(el, 'align') ? ({ textAlign } as Partial<BoardElement>) : null
+      ),
+    [patchSelection]
+  )
+
   const handleArrowheadsChange = useCallback(
     (choice: Arrowheads) =>
       patchSelection((el) =>
@@ -746,6 +754,7 @@ export default function App() {
           onFontFamilyChange={handleFontFamilyChange}
           onArrowheadsChange={handleArrowheadsChange}
           onStackChange={handleStackChange}
+          onTextAlignChange={handleTextAlignChange}
         />
       )}
       <ZoomControls viewport={viewport} onViewportChange={setViewport} />

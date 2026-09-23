@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   effectiveFontSize,
+  effectiveTextAlign,
+  TEXT_ALIGNS,
   FONT_FAMILIES,
   FONT_SIZES,
   STROKE_WIDTHS,
@@ -58,6 +60,13 @@ describe('supportsProperty', () => {
     expect(supportsProperty(note, 'font')).toBe(true)
     expect(supportsProperty(shape, 'font')).toBe(true)
     expect(supportsProperty(arrow, 'font')).toBe(false)
+  })
+
+  it('offers alignment wherever there is text', () => {
+    expect(supportsProperty(note, 'align')).toBe(true)
+    expect(supportsProperty(shape, 'align')).toBe(true)
+    expect(supportsProperty(arrow, 'align')).toBe(false)
+    expect(supportsProperty(ink, 'align')).toBe(false)
   })
 
   it('offers stack order to notes and shapes, which share a layer', () => {
@@ -147,6 +156,28 @@ describe('effectiveFontSize', () => {
   it('has nothing to report for elements without text', () => {
     expect(effectiveFontSize(arrow)).toBeNull()
     expect(effectiveFontSize(ink)).toBeNull()
+  })
+})
+
+describe('effectiveTextAlign', () => {
+  it('keeps how each type has always looked when none was chosen', () => {
+    // Notes have always been left-aligned, shape labels always centred.
+    expect(effectiveTextAlign(note)).toBe('left')
+    expect(effectiveTextAlign(shape)).toBe('center')
+  })
+
+  it('reports an explicit alignment', () => {
+    expect(effectiveTextAlign({ ...note, textAlign: 'right' })).toBe('right')
+    expect(effectiveTextAlign({ ...shape, textAlign: 'left' })).toBe('left')
+  })
+
+  it('has nothing to report for elements without text', () => {
+    expect(effectiveTextAlign(arrow)).toBeNull()
+    expect(effectiveTextAlign(ink)).toBeNull()
+  })
+
+  it('offers the three alignments', () => {
+    expect(TEXT_ALIGNS.map((a) => a.value)).toEqual(['left', 'center', 'right'])
   })
 })
 

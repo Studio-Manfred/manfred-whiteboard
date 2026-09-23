@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { PropertiesBar } from '../src/components/UI/PropertiesBar'
 import type { BoardElement, ConnectorElement, ShapeElement, StickyElement } from '../src/types/whiteboard'
 
@@ -34,6 +34,7 @@ function renderBar(selection: BoardElement[]) {
     onFontFamilyChange: vi.fn(),
     onArrowheadsChange: vi.fn(),
     onStackChange: vi.fn(),
+    onTextAlignChange: vi.fn(),
   }
   render(
     <PropertiesBar
@@ -71,6 +72,7 @@ describe('PropertiesBar', () => {
         onFontFamilyChange={vi.fn()}
         onArrowheadsChange={vi.fn()}
         onStackChange={vi.fn()}
+        onTextAlignChange={vi.fn()}
       />
     )
 
@@ -249,5 +251,55 @@ describe('PropertiesBar', () => {
       fireEvent.click(screen.getByRole('button', { name: label }))
       expect(handlers.onStackChange).toHaveBeenCalledWith(command)
     }
+  })
+  it('offers alignment wherever there is text', () => {
+    renderBar([note])
+    expect(control('Text alignment')).toBeInTheDocument()
+
+    cleanup()
+    renderBar([arrow])
+    expect(control('Text alignment')).not.toBeInTheDocument()
+  })
+
+  it('reports each alignment', () => {
+    const handlers = renderBar([note])
+
+    for (const [label, align] of [
+      ['Align left', 'left'],
+      ['Align centre', 'center'],
+      ['Align right', 'right'],
+    ] as const) {
+      fireEvent.click(control('Text alignment')!)
+      fireEvent.click(screen.getByRole('button', { name: label }))
+      expect(handlers.onTextAlignChange).toHaveBeenCalledWith(align)
+    }
+  })
+
+  it('marks how the selection is aligned today', () => {
+    renderBar([note])
+
+    fireEvent.click(control('Text alignment')!)
+
+    // A note with no alignment set has always been left-aligned.
+    expect(screen.getByRole('button', { name: 'Align left' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+  })
+
+  it('marks nothing when a mixed selection disagrees', () => {
+    // A note defaults to left and a shape label to centre.
+    renderBar([note, shape])
+
+    fireEvent.click(control('Text alignment')!)
+
+    expect(screen.getByRole('button', { name: 'Align left' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    expect(screen.getByRole('button', { name: 'Align centre' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
   })
 })

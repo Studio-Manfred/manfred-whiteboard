@@ -226,11 +226,36 @@ describe('boardToSvg', () => {
     expect(svg).toMatch(/font-family="[^"]*monospace"/)
   })
 
-  it("exports a shape's label", () => {
+  it('exports a note left-aligned by default, as it has always looked', () => {
+    const svg = boardToSvg(board(sticky('a', 0, 0, 'Hello')))
+
+    expect(svg).toContain('text-anchor="start"')
+    expect(svg).toContain('<tspan x="16"')
+  })
+
+  it('moves both the anchor and the x when text is aligned', () => {
+    const centred = boardToSvg(
+      board({ ...sticky('a', 0, 0, 'Hello'), textAlign: 'center' })
+    )
+    expect(centred).toContain('text-anchor="middle"')
+    expect(centred).toContain('<tspan x="100"')
+
+    const right = boardToSvg(board({ ...sticky('a', 0, 0, 'Hello'), textAlign: 'right' }))
+    expect(right).toContain('text-anchor="end"')
+    expect(right).toContain('<tspan x="184"')
+  })
+
+  it("exports a shape's label, centred by default", () => {
     const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery' }))
 
     expect(svg).toContain('Discovery')
     expect(svg).toContain('text-anchor="middle"')
+  })
+
+  it("aligns a shape's label when asked", () => {
+    const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery', textAlign: 'left' }))
+
+    expect(svg).toContain('text-anchor="start"')
   })
 
   it('skips a connector whose endpoints are gone', () => {
