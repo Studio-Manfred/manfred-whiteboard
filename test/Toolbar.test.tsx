@@ -2,24 +2,22 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Toolbar } from '../src/components/UI/Toolbar'
 
-const color = { value: '#FFF9B1', showBorder: false, onSelect: vi.fn() }
-
 describe('Toolbar', () => {
   it('exposes a single toolbar with an accessible name', () => {
-    render(<Toolbar activeTool="select" onToolChange={vi.fn()} color={color} />)
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
 
     expect(screen.getByRole('toolbar', { name: 'Drawing tools' })).toBeInTheDocument()
   })
 
   it('marks the active tool as pressed', () => {
-    render(<Toolbar activeTool="pen" onToolChange={vi.fn()} color={color} />)
+    render(<Toolbar activeTool="pen" onToolChange={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Pen' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('is a single tab stop — only the active tool is tabbable (roving tabindex)', () => {
-    render(<Toolbar activeTool="pen" onToolChange={vi.fn()} color={color} />)
+    render(<Toolbar activeTool="pen" onToolChange={vi.fn()} />)
 
     const buttons = screen.getAllByRole('button')
     const tabbable = buttons.filter((b) => b.getAttribute('tabindex') === '0')
@@ -32,7 +30,7 @@ describe('Toolbar', () => {
   })
 
   it('moves focus with ArrowRight / ArrowLeft', () => {
-    render(<Toolbar activeTool="select" onToolChange={vi.fn()} color={color} />)
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
 
     const select = screen.getByRole('button', { name: 'Select' })
     const pan = screen.getByRole('button', { name: 'Pan' })
@@ -46,46 +44,36 @@ describe('Toolbar', () => {
   })
 
   it('wraps focus around both ends', () => {
-    render(<Toolbar activeTool="select" onToolChange={vi.fn()} color={color} />)
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
 
     const select = screen.getByRole('button', { name: 'Select' })
-    const colours = screen.getByRole('button', { name: 'Colours' })
+    const eraser = screen.getByRole('button', { name: 'Eraser' })
 
     select.focus()
     fireEvent.keyDown(select, { key: 'ArrowLeft' })
-    expect(colours).toHaveFocus()
+    expect(eraser).toHaveFocus()
 
-    fireEvent.keyDown(colours, { key: 'ArrowRight' })
+    fireEvent.keyDown(eraser, { key: 'ArrowRight' })
     expect(select).toHaveFocus()
   })
 
-  it('arrows from the last tool onto the colour trigger', () => {
-    render(<Toolbar activeTool="select" onToolChange={vi.fn()} color={color} />)
-
-    const eraser = screen.getByRole('button', { name: 'Eraser' })
-    eraser.focus()
-    fireEvent.keyDown(eraser, { key: 'ArrowRight' })
-
-    expect(screen.getByRole('button', { name: 'Colours' })).toHaveFocus()
-  })
-
-  it('jumps to the first and last item with Home / End', () => {
-    render(<Toolbar activeTool="select" onToolChange={vi.fn()} color={color} />)
+  it('jumps to the first and last tool with Home / End', () => {
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
 
     const select = screen.getByRole('button', { name: 'Select' })
-    const colours = screen.getByRole('button', { name: 'Colours' })
+    const eraser = screen.getByRole('button', { name: 'Eraser' })
 
     select.focus()
     fireEvent.keyDown(select, { key: 'End' })
-    expect(colours).toHaveFocus()
+    expect(eraser).toHaveFocus()
 
-    fireEvent.keyDown(colours, { key: 'Home' })
+    fireEvent.keyDown(eraser, { key: 'Home' })
     expect(select).toHaveFocus()
   })
 
   it('selects a tool on click', () => {
     const onToolChange = vi.fn()
-    render(<Toolbar activeTool="select" onToolChange={onToolChange} color={color} />)
+    render(<Toolbar activeTool="select" onToolChange={onToolChange} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Rectangle' }))
 
@@ -94,7 +82,7 @@ describe('Toolbar', () => {
 
   it('does not change the tool merely by moving focus', () => {
     const onToolChange = vi.fn()
-    render(<Toolbar activeTool="select" onToolChange={onToolChange} color={color} />)
+    render(<Toolbar activeTool="select" onToolChange={onToolChange} />)
 
     const select = screen.getByRole('button', { name: 'Select' })
     select.focus()
@@ -103,8 +91,8 @@ describe('Toolbar', () => {
     expect(onToolChange).not.toHaveBeenCalled()
   })
 
-  it('keeps a single tab stop once the colour trigger joins', () => {
-    render(<Toolbar activeTool="pen" onToolChange={vi.fn()} color={color} />)
+  it('keeps a single tab stop', () => {
+    render(<Toolbar activeTool="pen" onToolChange={vi.fn()} />)
 
     const tabbable = screen
       .getAllByRole('button')
@@ -114,19 +102,4 @@ describe('Toolbar', () => {
     expect(tabbable[0]).toHaveAccessibleName('Pen')
   })
 
-  it('passes a colour choice up', () => {
-    const onSelect = vi.fn()
-    render(
-      <Toolbar
-        activeTool="select"
-        onToolChange={vi.fn()}
-        color={{ value: '#FFF9B1', showBorder: false, onSelect }}
-      />
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Colours' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Lavender' }))
-
-    expect(onSelect).toHaveBeenCalledWith('#E8D7FF', 'fill')
-  })
 })

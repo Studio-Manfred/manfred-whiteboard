@@ -64,6 +64,28 @@ The canvas is operable without a pointer. Tab to it, then:
 | `Escape` | Abandon the arrow being drawn |
 | Arrow keys on a resize handle | Resize the element (shift for a bigger step) |
 
+## Styling what you select
+
+Select something and a small bar floats beside it, carrying only the controls that apply:
+
+| Selection | Controls |
+| --- | --- |
+| Sticky note | Fill, text size, font |
+| Shape | Fill, border colour, thickness, text size, font |
+| Arrow | Line colour, thickness, arrowheads — none, start, end or both |
+| Ink | Line colour, thickness |
+
+A mixed selection gets the union of what it supports, and each control shows a value only
+when the whole selection agrees on one. Changing a property applies to everything selected
+as a single undo step.
+
+The bar sits above the selection, flipping below when there is no room, and its panels
+open away from the selection so they never cover what you are restyling. It is a single
+tab stop with arrow-key navigation, like the main toolbar.
+
+Fonts are the three that need no download — sans, serif and mono. The last fill you apply
+becomes the colour of the next sticky note.
+
 ## Drawing arrows
 
 Hover a note or shape and four blue dots appear on its edges. Press one and drag: a
@@ -90,10 +112,6 @@ With the select tool, dragging across empty canvas draws a marquee and selects
 everything it touches; shift-click adds an element to the selection or takes it out
 again. Dragging any member of a selection moves the whole group, and delete, recolour
 and undo all treat it as one action.
-
-The toolbar's palette control sets colours. With something selected it recolours it; with
-nothing selected, the fill becomes the colour of the next sticky note. Shapes get a
-separate Border row, and `No fill` empties a shape back to transparent.
 
 Undo and redo also have buttons in the top bar, which disable themselves when there is
 nothing to undo or redo.

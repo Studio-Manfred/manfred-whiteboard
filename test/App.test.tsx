@@ -312,52 +312,57 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled()
   })
 
-  function openColours() {
-    fireEvent.click(screen.getByRole('button', { name: 'Colours' }))
+  function openBarControl(name: string) {
+    fireEvent.click(screen.getByRole('button', { name }))
   }
 
-  it('recolours the selected sticky note', () => {
+  function selectNote(index = 0) {
+    fireEvent.pointerDown(stickies()[index], { clientX: 400, clientY: 300 })
+  }
+
+  it('recolours the selected sticky note from the properties bar', () => {
     render(<App />)
 
     pickTool('Sticky note')
     clickCanvasAt(400, 300)
-    fireEvent.pointerDown(stickies()[0], { clientX: 400, clientY: 300 })
+    selectNote()
 
-    openColours()
+    openBarControl('Fill colour')
     fireEvent.click(screen.getByRole('button', { name: 'Lavender' }))
 
     expect(stickies()[0]).toHaveStyle({ backgroundColor: '#E8D7FF' })
   })
 
-  it('uses the picked colour for the next note when nothing is selected', () => {
+  it('gives the next note the colour last applied', () => {
     render(<App />)
 
-    openColours()
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    selectNote()
+    openBarControl('Fill colour')
     fireEvent.click(screen.getByRole('button', { name: 'Mint Frost' }))
 
     pickTool('Sticky note')
-    clickCanvasAt(300, 300)
+    clickCanvasAt(700, 300)
 
-    expect(stickies()[0]).toHaveStyle({ backgroundColor: '#D4F0F0' })
+    expect(stickies()[1]).toHaveStyle({ backgroundColor: '#D4F0F0' })
   })
 
-  it('offers a border control for a shape but not for a sticky note', () => {
+  it('offers border controls for a shape but not for a sticky note', () => {
     render(<App />)
 
     pickTool('Sticky note')
     clickCanvasAt(300, 300)
     fireEvent.pointerDown(stickies()[0], { clientX: 300, clientY: 300 })
-    openColours()
-    expect(screen.queryByRole('group', { name: 'Border' })).not.toBeInTheDocument()
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    expect(screen.queryByRole('button', { name: 'Border colour' })).not.toBeInTheDocument()
 
     pickTool('Rectangle')
     clickCanvasAt(700, 300)
     const shape = document.querySelector('[data-testid^="shape-"]') as HTMLElement
     fireEvent.pointerDown(shape, { clientX: 700, clientY: 300 })
-    openColours()
 
-    expect(screen.getByRole('group', { name: 'Border' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Border colour' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thickness' })).toBeInTheDocument()
   })
 
   it('fills a selected shape', () => {
@@ -368,7 +373,7 @@ describe('App', () => {
     const shape = document.querySelector('[data-testid^="shape-"]') as HTMLElement
     fireEvent.pointerDown(shape, { clientX: 500, clientY: 300 })
 
-    openColours()
+    openBarControl('Fill colour')
     fireEvent.click(screen.getByRole('button', { name: 'Sky Blue' }))
 
     expect(document.querySelector('[data-testid^="shape-"] rect')).toHaveAttribute(
@@ -391,7 +396,7 @@ describe('App', () => {
       transactions += 1
     })
 
-    openColours()
+    openBarControl('Fill colour')
     fireEvent.click(screen.getByRole('button', { name: 'Coral Pink' }))
 
     expect(stickies()[0]).toHaveStyle({ backgroundColor: '#FFD1DC' })
@@ -521,7 +526,7 @@ describe('App', () => {
     placeTwoNotes()
     dragCanvas({ x: 120, y: 120 }, { x: 900, y: 500 })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Colours' }))
+    openBarControl('Fill colour')
     fireEvent.click(screen.getByRole('button', { name: 'Lavender' }))
 
     Array.from(stickies()).forEach((el) =>
@@ -890,5 +895,129 @@ describe('App', () => {
     fireEvent.pointerUp(canvas(), { clientX: 520, clientY: 360 })
 
     expect((stickies()[0] as HTMLElement).style.left).toBe(before)
+  })
+
+  function bar() {
+    return screen.queryByRole('toolbar', { name: 'Selection properties' })
+  }
+
+  it('shows the properties bar only while something is selected', () => {
+    render(<App />)
+    expect(bar()).not.toBeInTheDocument()
+
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    expect(bar()).toBeInTheDocument()
+
+    clickCanvasAt(50, 50)
+    expect(bar()).not.toBeInTheDocument()
+  })
+
+  it('keeps the bar out of the way while a marquee is being dragged', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    clickCanvasAt(50, 50)
+
+    fireEvent.pointerDown(canvas(), { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(canvas(), { clientX: 700, clientY: 600 })
+    expect(bar()).not.toBeInTheDocument()
+
+    fireEvent.pointerUp(canvas(), { clientX: 700, clientY: 600 })
+    expect(bar()).toBeInTheDocument()
+  })
+
+  it('changes a shape border thickness', () => {
+    render(<App />)
+    pickTool('Rectangle')
+    clickCanvasAt(400, 300)
+    const shape = () => document.querySelector('[data-testid^="shape-"] rect') as SVGRectElement
+    expect(shape().getAttribute('stroke-width')).toBe('2')
+
+    fireEvent.pointerDown(
+      document.querySelector('[data-testid^="shape-"]') as HTMLElement,
+      { clientX: 400, clientY: 300 }
+    )
+    openBarControl('Thickness')
+    fireEvent.click(screen.getByRole('button', { name: '8 px' }))
+
+    expect(shape().getAttribute('stroke-width')).toBe('8')
+  })
+
+  it('changes a note text size and font', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    selectNote()
+
+    openBarControl('Text size')
+    fireEvent.click(screen.getByRole('button', { name: '24 px' }))
+    openBarControl('Font')
+    fireEvent.click(screen.getByRole('button', { name: 'Mono' }))
+
+    const text = stickies()[0].querySelector('div > div') as HTMLElement
+    expect(text.style.fontSize).toBe('24px')
+    expect(text.style.fontFamily).toMatch(/monospace/)
+  })
+
+  it('changes the arrowheads on a selected arrow', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(800, 300)
+
+    const [first, second] = Array.from(stickies()) as HTMLElement[]
+    fireEvent.click(first.querySelector('[aria-label="Connect from right anchor"]')!, {
+      detail: 0,
+    })
+    fireEvent.click(second.querySelector('[aria-label="Connect from left anchor"]')!, {
+      detail: 0,
+    })
+
+    const paths = () =>
+      document.querySelector('[data-testid^="connector-"]')!.querySelectorAll('path')
+    // [0] is the invisible fat hit area that carries the click handler.
+    fireEvent.click(paths()[0])
+    const arrowPath = () => paths()[1]
+
+    openBarControl('Arrowheads')
+    fireEvent.click(screen.getByRole('button', { name: 'Arrowheads at both ends' }))
+
+    expect(arrowPath().getAttribute('marker-start')).toContain('arrowhead-start')
+    expect(arrowPath().getAttribute('marker-end')).toContain('arrowhead')
+  })
+
+  it('styles a whole selection in one undo step', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(800, 300)
+
+    // marquee over both
+    fireEvent.pointerDown(canvas(), { clientX: 120, clientY: 120 })
+    fireEvent.pointerMove(canvas(), { clientX: 1000, clientY: 500 })
+    fireEvent.pointerUp(canvas(), { clientX: 1000, clientY: 500 })
+
+    let transactions = 0
+    board.doc.on('afterTransaction', () => {
+      transactions += 1
+    })
+
+    openBarControl('Text size')
+    fireEvent.click(screen.getByRole('button', { name: '32 px' }))
+
+    expect(transactions).toBe(1)
+    Array.from(stickies()).forEach((note) => {
+      const text = note.querySelector('div > div') as HTMLElement
+      expect(text.style.fontSize).toBe('32px')
+    })
+  })
+
+  it('has no palette left in the main toolbar', () => {
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: 'Colours' })).not.toBeInTheDocument()
   })
 })

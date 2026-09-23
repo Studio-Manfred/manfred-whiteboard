@@ -26,17 +26,19 @@ import { resizeRect, type ResizeHandle } from './lib/resize'
 import { findSnapTarget, type AnchorCandidate } from './lib/connector-drag'
 import { getAnchorPosition } from './lib/connector-math'
 import { boardFilename, downloadBlob, svgToPngBlob } from './lib/download'
-import {
-  colorPatchFor,
-  currentFillOf,
-  supportsColorTarget,
-  type ColorTarget,
-} from './lib/element-colors'
+import { colorPatchFor } from './lib/element-colors'
 import { addElement, patchElement, removeElements } from './lib/board-mutations'
 import { toolForShortcut } from './lib/tool-shortcuts'
 import { generateUser } from './lib/user-identity'
 import { useUndoRedo } from './hooks/useUndoRedo'
-import { PASTEL_COLORS } from './types/whiteboard'
+import { PropertiesBar } from './components/UI/PropertiesBar'
+import { selectionBounds } from './lib/context-bar'
+import {
+  patchArrowheads,
+  supportsProperty,
+  type Arrowheads,
+} from './lib/element-style'
+import type { FontFamily } from './types/whiteboard'
 import type {
   BoardElement,
   UserAwareness,
@@ -499,30 +501,24 @@ export default function App() {
     }
   }, [elements, roomName])
 
-  // ----------- Colour -----------
+  // ----------- Styling the selection -----------
   const selectedElements = Array.from(selectedIds)
     .map((id) => elements.get(id))
     .filter((el): el is BoardElement => Boolean(el))
 
-  const handleColorSelect = useCallback(
-    (color: string, target: ColorTarget) => {
-      const selected = Array.from(selectedIds)
-        .map((id) => elements.get(id))
-        .filter((el): el is BoardElement => Boolean(el))
-
-      if (selected.length === 0) {
-        // Nothing selected: the choice becomes the colour of the next note.
-        if (target === 'fill') setDefaultFill(color)
-        return
-      }
-
+  /** Applies a patch to everything selected, as one undo step. */
+  const patchSelection = useCallback(
+    (patchFor: (element: BoardElement) => Partial<BoardElement> | null) => {
       const conn = connectionRef.current
       if (!conn) return
 
-      // One transaction, so recolouring a selection is a single undo step.
+      const targets = Array.from(selectedIds)
+        .map((id) => elements.get(id))
+        .filter((el): el is BoardElement => Boolean(el))
+
       conn.doc.transact(() => {
-        selected.forEach((el) => {
-          const patch = colorPatchFor(el, color, target)
+        targets.forEach((el) => {
+          const patch = patchFor(el)
           if (patch) patchElement(conn, el.id, patch)
         })
       })
@@ -530,12 +526,59 @@ export default function App() {
     [selectedIds, elements]
   )
 
-  // Show what the selection actually has, so the palette never claims a colour
-  // the selected element is not wearing.
-  const currentFill =
-    (selectedElements.length === 1 ? currentFillOf(selectedElements[0]) : null) ??
-    defaultFill ??
-    PASTEL_COLORS[0]
+  const handleFillChange = useCallback(
+    (color: string) => {
+      patchSelection((el) => colorPatchFor(el, color, 'fill'))
+      // With no palette in the toolbar, the last fill used becomes the colour
+      // the next note is created with.
+      setDefaultFill(color)
+    },
+    [patchSelection]
+  )
+
+  const handleStrokeColorChange = useCallback(
+    (color: string) => patchSelection((el) => colorPatchFor(el, color, 'border')),
+    [patchSelection]
+  )
+
+  const handleThicknessChange = useCallback(
+    (strokeWidth: number) =>
+      patchSelection((el) =>
+        supportsProperty(el, 'thickness') || supportsProperty(el, 'border')
+          ? ({ strokeWidth } as Partial<BoardElement>)
+          : null
+      ),
+    [patchSelection]
+  )
+
+  const handleFontSizeChange = useCallback(
+    (fontSize: number) =>
+      patchSelection((el) =>
+        supportsProperty(el, 'font') ? ({ fontSize } as Partial<BoardElement>) : null
+      ),
+    [patchSelection]
+  )
+
+  const handleFontFamilyChange = useCallback(
+    (fontFamily: FontFamily) =>
+      patchSelection((el) =>
+        supportsProperty(el, 'font') ? ({ fontFamily } as Partial<BoardElement>) : null
+      ),
+    [patchSelection]
+  )
+
+  const handleArrowheadsChange = useCallback(
+    (choice: Arrowheads) =>
+      patchSelection((el) =>
+        el.type === 'connector' ? (patchArrowheads(choice) as Partial<BoardElement>) : null
+      ),
+    [patchSelection]
+  )
+
+  // The bar floats beside the selection and measures itself; hidden
+  // mid-gesture, where it would only get in the way.
+  const selectionBox = selectionBounds(selectedElements, elements)
+  const showPropertiesBar = Boolean(selectionBox) && !marquee && !connectorDrag
 
   // While an arrow is in flight — or the connector tool is up — every element
   // shows its anchors, so the possible destinations are visible.
@@ -657,15 +700,21 @@ export default function App() {
 
       </CanvasViewport>
 
-      <Toolbar
-        activeTool={activeTool}
-        onToolChange={setActiveTool}
-        color={{
-          value: currentFill,
-          showBorder: supportsColorTarget(selectedElements, 'border'),
-          onSelect: handleColorSelect,
-        }}
-      />
+      <Toolbar activeTool={activeTool} onToolChange={setActiveTool} />
+
+      {showPropertiesBar && selectionBox && (
+        <PropertiesBar
+          selection={selectedElements}
+          bounds={selectionBox}
+          viewport={viewport}
+          onFillChange={handleFillChange}
+          onStrokeColorChange={handleStrokeColorChange}
+          onThicknessChange={handleThicknessChange}
+          onFontSizeChange={handleFontSizeChange}
+          onFontFamilyChange={handleFontFamilyChange}
+          onArrowheadsChange={handleArrowheadsChange}
+        />
+      )}
       <ZoomControls viewport={viewport} onViewportChange={setViewport} />
     </div>
   )

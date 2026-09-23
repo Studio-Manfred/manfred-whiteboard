@@ -336,4 +336,19 @@ describe('StickyNote Component', () => {
       screen.getByRole('button', { name: 'Connect from top anchor' })
     ).not.toHaveAttribute('data-snap-target')
   })
+  it('renders its text in the chosen size and family', () => {
+    render(
+      <StickyNote
+        element={{ ...sampleSticky, fontSize: 24, fontFamily: 'serif' }}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+
+    const text = screen.getByText('Initial Idea')
+    expect(text).toHaveStyle({ fontSize: '24px' })
+    expect(text.style.fontFamily).toMatch(/serif/)
+  })
 })

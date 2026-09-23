@@ -122,6 +122,63 @@ describe('ConnectorLayer', () => {
   })
 })
 
+describe('arrowheads', () => {
+  function renderWith(overrides: Partial<ConnectorElement>) {
+    render(
+      <ConnectorLayer
+        connectors={[connector(overrides)]}
+        elementsById={elements}
+        selectedIds={new Set()}
+        onSelect={vi.fn()}
+      />
+    )
+    return screen.getByTestId('connector-c1').querySelectorAll('path')[1]
+  }
+
+  it('puts a head at the end for an arrow saved before the fields existed', () => {
+    const path = renderWith({})
+
+    expect(path.getAttribute('marker-end')).toBe('url(#arrowhead)')
+    expect(path.getAttribute('marker-start')).toBeNull()
+  })
+
+  it('draws a head at the start when asked', () => {
+    const path = renderWith({ startArrow: true, endArrow: false })
+
+    expect(path.getAttribute('marker-start')).toBe('url(#arrowhead-start)')
+    expect(path.getAttribute('marker-end')).toBeNull()
+  })
+
+  it('draws both heads', () => {
+    const path = renderWith({ startArrow: true, endArrow: true })
+
+    expect(path.getAttribute('marker-start')).toBe('url(#arrowhead-start)')
+    expect(path.getAttribute('marker-end')).toBe('url(#arrowhead)')
+  })
+
+  it('draws a plain line with neither', () => {
+    const path = renderWith({ startArrow: false, endArrow: false })
+
+    expect(path.getAttribute('marker-start')).toBeNull()
+    expect(path.getAttribute('marker-end')).toBeNull()
+  })
+
+  it('uses the highlighted markers when the arrow is selected', () => {
+    render(
+      <ConnectorLayer
+        connectors={[connector({ startArrow: true, endArrow: true })]}
+        elementsById={elements}
+        selectedIds={new Set(['c1'])}
+        onSelect={vi.fn()}
+      />
+    )
+    const path = screen.getByTestId('connector-c1').querySelectorAll('path')[1]
+
+    expect(path.getAttribute('marker-start')).toBe('url(#arrowhead-start-selected)')
+    expect(path.getAttribute('marker-end')).toBe('url(#arrowhead-selected)')
+  })
+})
+
 describe('the arrow being dragged', () => {
   const draft = {
     from: { x: 200, y: 100 },

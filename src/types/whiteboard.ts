@@ -17,11 +17,15 @@ export interface BaseElement {
   updatedAt: number
 }
 
+/** Families that need no webfont download. */
+export type FontFamily = 'sans' | 'serif' | 'mono'
+
 export interface StickyElement extends BaseElement {
   type: 'sticky'
   text: string
   color: string
   fontSize: number
+  fontFamily?: FontFamily
 }
 
 export interface ShapeElement extends BaseElement {
@@ -31,6 +35,8 @@ export interface ShapeElement extends BaseElement {
   strokeColor: string
   strokeWidth: number
   text?: string
+  fontSize?: number
+  fontFamily?: FontFamily
 }
 
 export interface FrameElement extends BaseElement {
@@ -48,6 +54,12 @@ export interface ConnectorElement extends BaseElement {
   strokeColor: string
   strokeWidth: number
   style: 'curved' | 'straight'
+  /**
+   * Arrowheads. Undefined means a head at the end only, which is how every
+   * connector drawn before these fields existed behaves.
+   */
+  startArrow?: boolean
+  endArrow?: boolean
 }
 
 export interface DrawingElement extends BaseElement {
