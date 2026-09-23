@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
-import { Minus } from 'lucide-react'
+import { Layers, Minus } from 'lucide-react'
 import { useRovingTabindex } from '../../hooks/useRovingTabindex'
 import { BarPopover } from './BarPopover'
 import {
@@ -25,6 +25,7 @@ import { contextBarPosition } from '../../lib/context-bar'
 import { useWindowSize } from '../../hooks/useWindowSize'
 import type { Rect } from '../../lib/marquee'
 import type { Viewport } from '../../lib/coordinates'
+import type { StackCommand } from '../../lib/stacking'
 import type { BoardElement, ConnectorElement, FontFamily } from '../../types/whiteboard'
 
 const ARROWHEAD_OPTIONS: ReadonlyArray<{ value: Arrowheads; label: string; glyph: string }> = [
@@ -37,6 +38,13 @@ const ARROWHEAD_OPTIONS: ReadonlyArray<{ value: Arrowheads; label: string; glyph
 /** Used until the bar has measured itself — one layout pass, before paint. */
 const ESTIMATED_SIZE = { width: 220, height: 44 }
 
+const STACK_OPTIONS: ReadonlyArray<{ value: StackCommand; label: string }> = [
+  { value: 'front', label: 'Bring to front' },
+  { value: 'forward', label: 'Bring forward' },
+  { value: 'backward', label: 'Send backward' },
+  { value: 'back', label: 'Send to back' },
+]
+
 export interface PropertiesBarProps {
   selection: BoardElement[]
   /** World-space box the bar should sit beside. */
@@ -48,6 +56,7 @@ export interface PropertiesBarProps {
   onFontSizeChange: (size: number) => void
   onFontFamilyChange: (family: FontFamily) => void
   onArrowheadsChange: (choice: Arrowheads) => void
+  onStackChange: (command: StackCommand) => void
 }
 
 function Swatch({
@@ -90,7 +99,7 @@ function OptionList({
   onSelect: (value: never) => void
 }) {
   return (
-    <div className="flex flex-col gap-0.5 min-w-[7rem]">
+    <div className="flex flex-col gap-0.5 min-w-[9.5rem]">
       {options.map((option) => (
         <button
           key={option.value}
@@ -98,7 +107,7 @@ function OptionList({
           aria-label={option.label}
           aria-pressed={option.value === current}
           onClick={() => onSelect(option.value as never)}
-          className={`flex items-center justify-between gap-3 px-2 py-1.5 rounded-lg text-sm text-left transition-colors ${
+          className={`flex items-center justify-between gap-3 whitespace-nowrap px-2 py-1.5 rounded-lg text-sm text-left transition-colors ${
             option.value === current
               ? 'bg-blue-50 text-blue-700'
               : 'text-slate-700 hover:bg-slate-100'
@@ -126,6 +135,7 @@ export function PropertiesBar({
   onFontSizeChange,
   onFontFamilyChange,
   onArrowheadsChange,
+  onStackChange,
 }: PropertiesBarProps) {
   // The bar's width depends on how many controls the selection needs, so it
   // has to measure itself to sit centred over that selection.
@@ -137,7 +147,7 @@ export function PropertiesBar({
     selection.some((el) => supportsProperty(el, property))
 
   const controls: StyleProperty[] = (
-    ['fill', 'border', 'stroke', 'thickness', 'font', 'arrowheads'] as StyleProperty[]
+    ['fill', 'border', 'stroke', 'thickness', 'font', 'arrowheads', 'stacking'] as StyleProperty[]
   ).filter(has)
   // 'font' contributes two controls: size and family.
   const itemCount = controls.length + (has('font') ? 1 : 0)
@@ -220,7 +230,8 @@ export function PropertiesBar({
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
       // The bar must not disturb the board underneath it.
       onPointerDown={(e) => e.stopPropagation()}
-      className="fixed z-40 flex items-center gap-1 px-2 py-1.5 rounded-xl bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl shadow-slate-900/10"
+      // Above the top bar, so a panel opening upward is never swallowed by it.
+      className="fixed z-50 flex items-center gap-1 px-2 py-1.5 rounded-xl bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl shadow-slate-900/10"
     >
       {has('fill') && (
         <BarPopover
@@ -365,6 +376,26 @@ export function PropertiesBar({
             </span>
           </BarPopover>
         </>
+      )}
+
+      {has('stacking') && (
+        <BarPopover
+          label="Stack order"
+          {...nextItem()}
+          panelPlacement={panelPlacement}
+          renderPanel={(close) => (
+            <OptionList
+              current={null}
+              options={STACK_OPTIONS.map(({ value, label }) => ({ value, label }))}
+              onSelect={(command: StackCommand) => {
+                onStackChange(command)
+                close()
+              }}
+            />
+          )}
+        >
+          <Layers size={16} strokeWidth={1.8} aria-hidden="true" />
+        </BarPopover>
       )}
 
       {has('arrowheads') && (

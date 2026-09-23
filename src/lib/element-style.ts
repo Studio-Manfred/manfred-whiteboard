@@ -6,7 +6,14 @@
 import type { BoardElement, ConnectorElement, FontFamily } from '../types/whiteboard'
 
 /** A control the properties bar can offer. */
-export type StyleProperty = 'fill' | 'border' | 'stroke' | 'thickness' | 'font' | 'arrowheads'
+export type StyleProperty =
+  | 'fill'
+  | 'border'
+  | 'stroke'
+  | 'thickness'
+  | 'font'
+  | 'arrowheads'
+  | 'stacking'
 
 export type Arrowheads = 'none' | 'start' | 'end' | 'both'
 
@@ -45,6 +52,9 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
       return element.type === 'sticky' || element.type === 'shape'
     case 'arrowheads':
       return element.type === 'connector'
+    case 'stacking':
+      // Arrows and ink live on their own layers beneath these.
+      return element.type === 'sticky' || element.type === 'shape'
     default:
       return false
   }

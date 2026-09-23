@@ -63,8 +63,8 @@ export function ShapeItem({
   return (
     <div
       data-testid={`shape-${element.id}`}
-      className={`absolute group pointer-events-auto select-none flex items-center justify-center ${
-        isSelected ? 'ring-2 ring-blue-500 z-30' : 'z-10'
+      className={`absolute z-10 group pointer-events-auto select-none flex items-center justify-center ${
+        isSelected ? 'ring-2 ring-blue-500' : ''
       }`}
       style={{
         left: `${element.x}px`,

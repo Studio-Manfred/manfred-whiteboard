@@ -60,6 +60,13 @@ describe('supportsProperty', () => {
     expect(supportsProperty(arrow, 'font')).toBe(false)
   })
 
+  it('offers stack order to notes and shapes, which share a layer', () => {
+    expect(supportsProperty(note, 'stacking')).toBe(true)
+    expect(supportsProperty(shape, 'stacking')).toBe(true)
+    expect(supportsProperty(arrow, 'stacking')).toBe(false)
+    expect(supportsProperty(ink, 'stacking')).toBe(false)
+  })
+
   it('offers arrowheads to arrows alone', () => {
     expect(supportsProperty(arrow, 'arrowheads')).toBe(true)
     expect(supportsProperty(ink, 'arrowheads')).toBe(false)

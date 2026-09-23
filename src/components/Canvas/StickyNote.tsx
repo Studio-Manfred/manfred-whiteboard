@@ -70,10 +70,8 @@ export function StickyNote({
   return (
     <div
       data-testid={`sticky-${element.id}`}
-      className={`absolute group pointer-events-auto rounded-lg transition-shadow select-none flex flex-col p-4 ${
-        isSelected
-          ? 'ring-2 ring-blue-500 shadow-xl z-30'
-          : 'shadow-md hover:shadow-lg z-10'
+      className={`absolute z-10 group pointer-events-auto rounded-lg transition-shadow select-none flex flex-col p-4 ${
+        isSelected ? 'ring-2 ring-blue-500 shadow-xl' : 'shadow-md hover:shadow-lg'
       }`}
       style={{
         left: `${element.x}px`,

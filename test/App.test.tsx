@@ -1020,4 +1020,112 @@ describe('App', () => {
 
     expect(screen.queryByRole('button', { name: 'Colours' })).not.toBeInTheDocument()
   })
+
+  /** Ids of the notes and shapes in paint order, back to front. */
+  function paintOrder() {
+    return Array.from(
+      document.querySelectorAll('[data-testid^="sticky-"], [data-testid^="shape-"]')
+    ).map((el) => el.getAttribute('data-testid'))
+  }
+
+  function stack(command: string) {
+    openBarControl('Stack order')
+    fireEvent.click(screen.getByRole('button', { name: command }))
+  }
+
+  it('paints later elements on top by default', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(440, 330)
+
+    const [first, second] = paintOrder()
+    expect(first).not.toBe(second)
+    expect(paintOrder()).toHaveLength(2)
+  })
+
+  it('sends the selection to the back and brings it forward again', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(440, 330)
+
+    const top = paintOrder()[1]
+    // The newest note is selected right after creating it.
+    stack('Send to back')
+    expect(paintOrder()[0]).toBe(top)
+
+    stack('Bring to front')
+    expect(paintOrder()[1]).toBe(top)
+  })
+
+  it('steps one place at a time', () => {
+    render(<App />)
+    for (const x of [300, 340, 380]) {
+      pickTool('Sticky note')
+      clickCanvasAt(x, 300)
+    }
+    const newest = paintOrder()[2]
+
+    stack('Send backward')
+    expect(paintOrder()[1]).toBe(newest)
+
+    stack('Send backward')
+    expect(paintOrder()[0]).toBe(newest)
+  })
+
+  it('stacks a shape above a note, which used to be impossible', () => {
+    render(<App />)
+    pickTool('Rectangle')
+    clickCanvasAt(400, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(430, 330)
+
+    // The note is on top, having been made last; put the shape above it.
+    const shapeId = paintOrder().find((id) => id!.startsWith('shape-'))
+    fireEvent.pointerDown(
+      document.querySelector('[data-testid^="shape-"]') as HTMLElement,
+      { clientX: 400, clientY: 300 }
+    )
+    stack('Bring to front')
+
+    expect(paintOrder()[1]).toBe(shapeId)
+  })
+
+  it('restacks in one undo step', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(440, 330)
+
+    let transactions = 0
+    board.doc.on('afterTransaction', () => {
+      transactions += 1
+    })
+
+    stack('Send to back')
+
+    expect(transactions).toBe(1)
+  })
+
+  it('writes nothing when the command changes nothing', () => {
+    render(<App />)
+    pickTool('Sticky note')
+    clickCanvasAt(400, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(440, 330)
+
+    let transactions = 0
+    board.doc.on('afterTransaction', () => {
+      transactions += 1
+    })
+
+    // The newest is already at the front.
+    stack('Bring to front')
+
+    expect(transactions).toBe(0)
+  })
 })

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { selectionBounds, contextBarPosition, BAR_GAP, VIEWPORT_MARGIN } from '../src/lib/context-bar'
+import {
+  selectionBounds,
+  contextBarPosition,
+  BAR_GAP,
+  PANEL_ALLOWANCE,
+  VIEWPORT_MARGIN,
+} from '../src/lib/context-bar'
 import type { BoardElement } from '../src/types/whiteboard'
 import type { Viewport } from '../src/lib/coordinates'
 
@@ -73,6 +79,18 @@ describe('contextBarPosition', () => {
 
     expect(at.placement).toBe('below')
     expect(at.y).toBe(10 + 200 + BAR_GAP)
+  })
+
+  it('flips below when there is no room for a panel above the bar', () => {
+    // There is room for the bar itself here, but not for a panel above it.
+    const at = contextBarPosition(
+      { x: 400, y: VIEWPORT_MARGIN + PANEL_ALLOWANCE, width: 200, height: 200 },
+      viewport,
+      bar,
+      screen
+    )
+
+    expect(at.placement).toBe('below')
   })
 
   it('keeps the bar on screen at the left edge', () => {

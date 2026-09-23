@@ -15,6 +15,11 @@ import type { BoardElement } from '../types/whiteboard'
 export const BAR_GAP = 12
 /** How close the bar may come to the window edge. */
 export const VIEWPORT_MARGIN = 12
+/**
+ * Room kept for a panel opening upward out of the bar. Without it the bar can
+ * sit high enough that its own panel opens off-screen, or under the top bar.
+ */
+export const PANEL_ALLOWANCE = 160
 
 /** An arrow has no geometry of its own; use the anchors it joins. */
 function connectorBounds(
@@ -85,7 +90,8 @@ export function contextBarPosition(
   )
 
   const above = topLeft.y - bar.height - BAR_GAP
-  const placement: BarPosition['placement'] = above < VIEWPORT_MARGIN ? 'below' : 'above'
+  const placement: BarPosition['placement'] =
+    above < VIEWPORT_MARGIN + PANEL_ALLOWANCE ? 'below' : 'above'
 
   const centre = (topLeft.x + bottomRight.x) / 2
   const x = Math.min(
