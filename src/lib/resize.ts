@@ -7,8 +7,10 @@
  * testing without a canvas in the way.
  */
 
+import { scalePoints } from './scale-points'
 import type { Point } from './coordinates'
 import type { Rect } from './marquee'
+import type { BoardElement } from '../types/whiteboard'
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 
@@ -108,3 +110,23 @@ export function resizeRect(
 
   return { x, y, width, height }
 }
+
+/**
+ * The patch that resizes an element to a new box.
+ *
+ * Ink has no body to stretch, so its points move with the box; everything else
+ * only needs the box itself.
+ */
+export function resizePatchFor(element: BoardElement, next: Rect): Partial<BoardElement> {
+  if (element.type !== 'drawing') return next as Partial<BoardElement>
+
+  return {
+    ...next,
+    points: scalePoints(
+      element.points,
+      { x: element.x, y: element.y, width: element.width, height: element.height },
+      next
+    ),
+  } as Partial<BoardElement>
+}
+

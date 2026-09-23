@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  resizePatchFor,
   RESIZE_HANDLES,
   MIN_ELEMENT_SIZE,
   resizeRect,
@@ -7,6 +8,7 @@ import {
   handleAnchorPoint,
 } from '../src/lib/resize'
 import type { Rect } from '../src/lib/marquee'
+import type { BoardElement } from '../src/types/whiteboard'
 
 const base: Rect = { x: 100, y: 100, width: 200, height: 100 }
 
@@ -138,3 +140,47 @@ describe('the handles themselves', () => {
     expect(handleAnchorPoint('w')).toEqual({ x: 0, y: 0.5 })
   })
 })
+
+describe('resizePatchFor', () => {
+  const box = { x: 100, y: 100, width: 200, height: 100 }
+
+  const ink = {
+    id: 'd', type: 'drawing', zIndex: 1, createdAt: 0, updatedAt: 0,
+    strokeColor: '#000', strokeWidth: 3, ...box,
+    points: [
+      { x: 100, y: 100 },
+      { x: 200, y: 200 },
+      { x: 300, y: 150 },
+    ],
+  } as BoardElement
+
+  const note = {
+    id: 'n', type: 'sticky', zIndex: 1, createdAt: 0, updatedAt: 0,
+    text: '', color: '#FFF9B1', fontSize: 16, ...box,
+  } as BoardElement
+
+  it('moves an element by its box alone', () => {
+    const next = { x: 0, y: 0, width: 400, height: 200 }
+
+    expect(resizePatchFor(note, next)).toEqual(next)
+  })
+
+  it('scales a stroke\'s points, since ink has no body to stretch', () => {
+    const patch = resizePatchFor(ink, { x: 100, y: 100, width: 400, height: 100 }) as {
+      points: Array<{ x: number; y: number }>
+    }
+
+    expect(patch.points).toEqual([
+      { x: 100, y: 100 },
+      { x: 300, y: 200 },
+      { x: 500, y: 150 },
+    ])
+  })
+
+  it('carries the new box along with the points', () => {
+    const next = { x: 0, y: 0, width: 100, height: 50 }
+
+    expect(resizePatchFor(ink, next)).toMatchObject(next)
+  })
+})
+

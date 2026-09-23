@@ -60,8 +60,9 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
     case 'arrowheads':
       return element.type === 'connector'
     case 'stacking':
-      // Arrows and ink live on their own layers beneath these.
-      return element.type === 'sticky' || element.type === 'shape'
+      // Arrows are derived from the elements they join, so they stay on their
+      // own layer; everything else shares one stack.
+      return element.type !== 'connector'
     default:
       return false
   }

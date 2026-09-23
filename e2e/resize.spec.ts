@@ -57,3 +57,41 @@ test('resizes from the keyboard alone', async ({ page }) => {
   expect(after.width).toBeCloseTo(before.width + 50, 1)
   expect(after.height).toBeCloseTo(before.height, 1)
 })
+
+test('resizes a freehand stroke, scaling the ink itself', async ({ page }) => {
+  await page.goto(`/#room=resize-ink-${Date.now()}`)
+
+  await page.getByRole('button', { name: 'Pen' }).click()
+  await page.mouse.move(120, 250)
+  await page.mouse.down()
+  for (const [x, y] of [[180, 320], [240, 260], [300, 330]]) {
+    await page.mouse.move(x, y, { steps: 8 })
+  }
+  await page.mouse.up()
+  await page.getByRole('button', { name: 'Select' }).click()
+
+  const item = page.locator('[data-testid^="drawing-"]').first()
+  const widthOf = () => item.evaluate((el) => parseFloat((el as HTMLElement).style.width))
+  const inkPath = () => item.locator('[data-ink="pen"]').getAttribute('d')
+
+  // Select through the stroke itself, at its starting end.
+  await page.mouse.click(122, 252)
+  await expect(page.getByRole('button', { name: /^Resize from/ })).toHaveCount(8)
+
+  const before = await widthOf()
+  const beforePath = await inkPath()
+
+  const handle = page.getByRole('button', { name: 'Resize from right edge' })
+  const box = (await handle.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 100, box.y, { steps: 10 })
+  await page.mouse.up()
+
+  expect(await widthOf()).toBeGreaterThan(before)
+  // The ink is redrawn, not merely its box: the handles live in a layer that
+  // disables pointer events, so this only works while they re-enable their own.
+  expect(await inkPath()).not.toBe(beforePath)
+  await expect(page.getByRole('button', { name: /^Resize from/ })).toHaveCount(8)
+})
+

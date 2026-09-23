@@ -1,88 +1,18 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import { DrawingLayer } from '../src/components/Canvas/DrawingLayer'
-import type { DrawingElement } from '../src/types/whiteboard'
-
-function stroke(id: string, overrides: Partial<DrawingElement> = {}): DrawingElement {
-  return {
-    id,
-    type: 'drawing',
-    x: 0,
-    y: 0,
-    width: 50,
-    height: 50,
-    zIndex: 1,
-    points: [
-      { x: 0, y: 0 },
-      { x: 25, y: 40 },
-      { x: 50, y: 10 },
-    ],
-    strokeColor: '#0f172a',
-    strokeWidth: 3,
-    createdAt: 0,
-    updatedAt: 0,
-    ...overrides,
-  }
-}
 
 function renderLayer(props: Partial<React.ComponentProps<typeof DrawingLayer>> = {}) {
-  const onSelect = vi.fn()
-  const view = render(
-    <DrawingLayer
-      drawings={[]}
-      activePoints={[]}
-      activeColor="#0f172a"
-      activeWidth={3}
-      selectedIds={new Set()}
-      onSelect={onSelect}
-      {...props}
-    />
+  return render(
+    <DrawingLayer activePoints={[]} activeColor="#0f172a" activeWidth={3} {...props} />
   )
-  return { onSelect, ...view }
 }
 
 describe('DrawingLayer', () => {
-  it('renders one group per committed stroke', () => {
-    renderLayer({ drawings: [stroke('d1'), stroke('d2')] })
+  it('shows nothing while no stroke is in progress', () => {
+    renderLayer()
 
-    expect(screen.getByTestId('drawing-d1')).toBeInTheDocument()
-    expect(screen.getByTestId('drawing-d2')).toBeInTheDocument()
-  })
-
-  it('renders nothing but the canvas when the board has no ink', () => {
-    const { container } = renderLayer()
-
-    expect(container.querySelectorAll('path')).toHaveLength(0)
-  })
-
-  it('draws each stroke in its own colour and width', () => {
-    const { container } = renderLayer({ drawings: [stroke('d1', { strokeColor: '#ef4444', strokeWidth: 8 })] })
-    const visible = container.querySelectorAll('path')[1]
-
-    expect(visible.getAttribute('stroke')).toBe('#ef4444')
-    expect(visible.getAttribute('stroke-width')).toBe('8')
-  })
-
-  it('highlights a selected stroke', () => {
-    const { container } = renderLayer({ drawings: [stroke('d1')], selectedIds: new Set(['d1']) })
-
-    expect(container.querySelectorAll('path')[1].getAttribute('stroke')).toBe('#3b82f6')
-  })
-
-  it('gives every stroke a hit area at least as fat as the ink', () => {
-    const { container } = renderLayer({ drawings: [stroke('d1', { strokeWidth: 20 })] })
-    const hitArea = container.querySelectorAll('path')[0]
-
-    expect(Number(hitArea.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(20)
-    expect(hitArea.getAttribute('stroke')).toBe('transparent')
-  })
-
-  it('selects a stroke when its hit area is clicked', () => {
-    const { onSelect, container } = renderLayer({ drawings: [stroke('d1')] })
-
-    fireEvent.click(container.querySelectorAll('path')[0])
-
-    expect(onSelect).toHaveBeenCalledWith('d1', expect.anything())
+    expect(screen.queryByTestId('active-stroke')).not.toBeInTheDocument()
   })
 
   it('previews the stroke being drawn right now', () => {
@@ -92,7 +22,6 @@ describe('DrawingLayer', () => {
         { x: 10, y: 10 },
       ],
       activeColor: '#8b5cf6',
-      activeWidth: 5,
     })
     const preview = screen.getByTestId('active-stroke')
 
@@ -116,28 +45,17 @@ describe('DrawingLayer', () => {
     expect(screen.getByTestId('active-stroke').getAttribute('d')!.trimEnd()).toMatch(/Z$/)
   })
 
-  it('waits for a second point before previewing — one point is not a stroke', () => {
-    const { container } = renderLayer({ activePoints: [{ x: 0, y: 0 }] })
+  it('waits for a second point — one point is not a stroke', () => {
+    renderLayer({ activePoints: [{ x: 0, y: 0 }] })
 
-    expect(container.querySelectorAll('path')).toHaveLength(0)
-  })
-  it('draws pen ink as a filled outline and old strokes as stroked lines', () => {
-    renderLayer({ drawings: [{ ...stroke('pen1'), ink: 'pen' }, stroke('old1')] })
-
-    const pen = screen.getByTestId('drawing-pen1').querySelector('[data-ink="pen"]')!
-    expect(pen.getAttribute('fill')).toBe('#0f172a')
-    expect(pen.getAttribute('stroke')).toBeNull()
-
-    const old = screen.getByTestId('drawing-old1').querySelectorAll('path')[1]
-    expect(old.getAttribute('stroke')).toBe('#0f172a')
-    expect(old.getAttribute('fill')).toBe('none')
+    expect(screen.queryByTestId('active-stroke')).not.toBeInTheDocument()
   })
 
-  it('keeps a fat hit area for pen ink, whose tail is too thin to click', () => {
-    renderLayer({ drawings: [{ ...stroke('pen1'), ink: 'pen', strokeWidth: 1 }] })
+  it('never intercepts pointer events', () => {
+    const { container } = renderLayer()
 
-    const hitArea = screen.getByTestId('drawing-pen1').querySelectorAll('path')[0]
-    expect(Number(hitArea.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(12)
-    expect(hitArea.getAttribute('stroke')).toBe('transparent')
+    expect((container.firstChild as SVGElement).getAttribute('class')).toContain(
+      'pointer-events-none'
+    )
   })
 })

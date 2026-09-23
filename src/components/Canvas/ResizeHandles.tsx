@@ -61,7 +61,9 @@ export function ResizeHandles({ onResizeStart, onResizeByKeyboard }: ResizeHandl
               top: `${anchor.y * 100}%`,
               cursor: cursorForHandle(handle),
             }}
-            className="absolute z-40 w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-blue-600 bg-white shadow-sm transition-transform hover:scale-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            // pointer-events-auto because the world container sets none: without it a
+            // handle inside a layer that does not re-enable events is unclickable.
+            className="absolute z-40 w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-blue-600 bg-white shadow-sm transition-transform pointer-events-auto hover:scale-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           />
         )
       })}
