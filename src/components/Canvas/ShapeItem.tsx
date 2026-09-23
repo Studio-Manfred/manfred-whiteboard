@@ -3,7 +3,11 @@ import type { ShapeElement, AnchorPosition } from '../../types/whiteboard'
 import { ResizeHandles } from './ResizeHandles'
 import type { ResizeHandle } from '../../lib/resize'
 import type { Point } from '../../lib/coordinates'
-import { effectiveTextAlign, fontFamilyStack } from '../../lib/element-style'
+import {
+  effectiveTextAlign,
+  fontFamilyStack,
+  textPaddingFor,
+} from '../../lib/element-style'
 
 interface ShapeItemProps {
   element: ShapeElement
@@ -59,6 +63,7 @@ export function ShapeItem({
   }
 
   const anchors: AnchorPosition[] = ['top', 'right', 'bottom', 'left']
+  const textPadding = textPaddingFor(element) ?? 0
 
   return (
     <div
@@ -109,7 +114,10 @@ export function ShapeItem({
       </svg>
 
       {/* Centered label or input */}
-      <div className="relative z-20 px-2 w-full">
+      <div
+        className="relative z-20 w-full"
+        style={{ paddingLeft: textPadding, paddingRight: textPadding }}
+      >
         {isEditing ? (
           <input
             ref={inputRef}

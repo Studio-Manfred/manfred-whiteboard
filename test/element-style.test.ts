@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   effectiveFontSize,
+  textPaddingFor,
+  TEXT_PADDING,
   effectiveTextAlign,
   TEXT_ALIGNS,
   FONT_FAMILIES,
@@ -178,6 +180,35 @@ describe('effectiveTextAlign', () => {
 
   it('offers the three alignments', () => {
     expect(TEXT_ALIGNS.map((a) => a.value)).toEqual(['left', 'center', 'right'])
+  })
+})
+
+describe('textPaddingFor', () => {
+  it('keeps a note at the padding it has always had', () => {
+    expect(textPaddingFor(note)).toBe(TEXT_PADDING.sticky)
+  })
+
+  it('insets a shape label so it never leans on the border', () => {
+    expect(textPaddingFor(shape)).toBeGreaterThanOrEqual(TEXT_PADDING.shape)
+  })
+
+  it('grows a shape inset with its border, which is drawn half inside', () => {
+    const thin = textPaddingFor({ ...shape, strokeWidth: 2 })
+    const thick = textPaddingFor({ ...shape, strokeWidth: 16 })
+
+    expect(thick).toBe(thin + 7)
+  })
+
+  it('copes with a shape that has no stroke width set', () => {
+    const bare = { ...shape }
+    delete (bare as Partial<ShapeElement>).strokeWidth
+
+    expect(textPaddingFor(bare as ShapeElement)).toBeGreaterThan(0)
+  })
+
+  it('has nothing to say about elements without text', () => {
+    expect(textPaddingFor(arrow)).toBeNull()
+    expect(textPaddingFor(ink)).toBeNull()
   })
 })
 
