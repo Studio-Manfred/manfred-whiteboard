@@ -15,6 +15,8 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Stack order in the properties bar: bring to front, bring forward, send backward, send to
+  back, applied across a selection in one undo step (STU-865).
 - Floating properties bar beside the selection: fill, border colour, thickness, text size
   and font for notes and shapes; colour, thickness and arrowheads (none / start / end /
   both) for arrows; colour and thickness for ink. Applies across a multi-selection in one
@@ -69,6 +71,11 @@ All notable changes to this project are documented here. The format follows
   build rather than printing a warning.
 
 ### Fixed
+
+- On-screen stacking ignored `zIndex` entirely: notes were painted as one group above
+  shapes as another, so a shape could never sit above a note, while hit-testing and the
+  SVG export both read `zIndex`. The eraser could therefore delete something other than
+  what was visibly on top. All three now agree (STU-865).
 
 - Connectors and pen strokes could not be clicked, so they could not be selected or
   deleted. Their hit areas carried `pointer-events-stroke`, which is not a Tailwind

@@ -70,10 +70,15 @@ Select something and a small bar floats beside it, carrying only the controls th
 
 | Selection | Controls |
 | --- | --- |
-| Sticky note | Fill, text size, font |
-| Shape | Fill, border colour, thickness, text size, font |
+| Sticky note | Fill, text size, font, stack order |
+| Shape | Fill, border colour, thickness, text size, font, stack order |
 | Arrow | Line colour, thickness, arrowheads — none, start, end or both |
 | Ink | Line colour, thickness |
+
+Stack order covers the usual four — bring to front, bring forward, send backward, send to
+back. Notes and shapes share one layer and are painted back to front by their `zIndex`, so
+a shape can sit above a note. Arrows and ink live on their own layers underneath, which is
+why they have no stack controls.
 
 A mixed selection gets the union of what it supports, and each control shows a value only
 when the whole selection agrees on one. Changing a property applies to everything selected

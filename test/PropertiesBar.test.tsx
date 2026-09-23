@@ -33,6 +33,7 @@ function renderBar(selection: BoardElement[]) {
     onFontSizeChange: vi.fn(),
     onFontFamilyChange: vi.fn(),
     onArrowheadsChange: vi.fn(),
+    onStackChange: vi.fn(),
   }
   render(
     <PropertiesBar
@@ -69,6 +70,7 @@ describe('PropertiesBar', () => {
         onFontSizeChange={vi.fn()}
         onFontFamilyChange={vi.fn()}
         onArrowheadsChange={vi.fn()}
+        onStackChange={vi.fn()}
       />
     )
 
@@ -223,5 +225,29 @@ describe('PropertiesBar', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
+  })
+  it('offers stack order for notes and shapes only', () => {
+    renderBar([note])
+    expect(control('Stack order')).toBeInTheDocument()
+  })
+
+  it('offers no stack order for an arrow, which sits on its own layer', () => {
+    renderBar([arrow])
+    expect(control('Stack order')).not.toBeInTheDocument()
+  })
+
+  it('reports each stacking command', () => {
+    const handlers = renderBar([shape])
+
+    for (const [label, command] of [
+      ['Bring to front', 'front'],
+      ['Bring forward', 'forward'],
+      ['Send backward', 'backward'],
+      ['Send to back', 'back'],
+    ] as const) {
+      fireEvent.click(control('Stack order')!)
+      fireEvent.click(screen.getByRole('button', { name: label }))
+      expect(handlers.onStackChange).toHaveBeenCalledWith(command)
+    }
   })
 })

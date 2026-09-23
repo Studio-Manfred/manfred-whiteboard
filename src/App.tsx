@@ -33,6 +33,7 @@ import { generateUser } from './lib/user-identity'
 import { useUndoRedo } from './hooks/useUndoRedo'
 import { PropertiesBar } from './components/UI/PropertiesBar'
 import { selectionBounds } from './lib/context-bar'
+import { orderedIds, restack, zIndexPatches, type StackCommand } from './lib/stacking'
 import {
   patchArrowheads,
   supportsProperty,
@@ -575,6 +576,34 @@ export default function App() {
     [patchSelection]
   )
 
+  const handleStackChange = useCallback(
+    (command: StackCommand) => {
+      const conn = connectionRef.current
+      if (!conn) return
+
+      // Only notes and shapes share a layer, so only they take part.
+      const stackable = new Map(
+        Array.from(elements).filter(
+          ([, el]) => el.type === 'sticky' || el.type === 'shape'
+        )
+      )
+      // Compare the order, not the numbers: zIndex values are renumbered to
+      // positions, so a command that moves nothing would still look like a
+      // change and cost a pointless undo step.
+      const current = orderedIds(stackable)
+      const next = restack(current, selectedIds, command)
+      if (next.every((id, index) => id === current[index])) return
+
+      const patches = zIndexPatches(next, stackable)
+      if (patches.size === 0) return
+
+      conn.doc.transact(() => {
+        patches.forEach((zIndex, id) => patchElement(conn, id, { zIndex }))
+      })
+    },
+    [elements, selectedIds]
+  )
+
   // The bar floats beside the selection and measures itself; hidden
   // mid-gesture, where it would only get in the way.
   const selectionBox = selectionBounds(selectedElements, elements)
@@ -613,6 +642,10 @@ export default function App() {
 
   // ----------- Derived element lists -----------
   const { stickies, shapes, connectors, drawings } = partitionElements(elements)
+  // One list so a shape can sit above a note, and vice versa.
+  const stackedElements = [...shapes, ...stickies].sort(
+    (a, b) => a.zIndex - b.zIndex || a.createdAt - b.createdAt
+  )
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-slate-50">
@@ -651,45 +684,44 @@ export default function App() {
           draft={connectorDraft}
         />
 
-        {/* Shapes */}
-        {shapes.map((shape) => (
-          <ShapeItem
-            key={shape.id}
-            element={shape}
-            isSelected={selectedIds.has(shape.id)}
-            onSelect={(e) => handleElementSelect(shape.id, e)}
-            onUpdate={(partial) => updateElement(shape.id, partial)}
-            onDragStart={(e) => handleDragStart(shape.id, pointerWorld(e), e)}
-            onAnchorDragStart={(anchor, e) => handleAnchorDragStart(shape.id, anchor, e)}
-            onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(shape.id, anchor)}
-            showAnchors={showAllAnchors}
-            highlightedAnchor={anchorHighlightFor(shape.id)}
-            onResizeStart={(handle, e) => handleResizeStart(shape.id, handle, e)}
-            onResizeByKeyboard={(handle, delta) =>
-              handleResizeByKeyboard(shape.id, handle, delta)
-            }
-          />
-        ))}
-
-        {/* Sticky notes */}
-        {stickies.map((sticky) => (
-          <StickyNote
-            key={sticky.id}
-            element={sticky}
-            isSelected={selectedIds.has(sticky.id)}
-            onSelect={(e) => handleElementSelect(sticky.id, e)}
-            onUpdate={(partial) => updateElement(sticky.id, partial)}
-            onDragStart={(e) => handleDragStart(sticky.id, pointerWorld(e), e)}
-            onAnchorDragStart={(anchor, e) => handleAnchorDragStart(sticky.id, anchor, e)}
-            onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(sticky.id, anchor)}
-            showAnchors={showAllAnchors}
-            highlightedAnchor={anchorHighlightFor(sticky.id)}
-            onResizeStart={(handle, e) => handleResizeStart(sticky.id, handle, e)}
-            onResizeByKeyboard={(handle, delta) =>
-              handleResizeByKeyboard(sticky.id, handle, delta)
-            }
-          />
-        ))}
+        {/* Notes and shapes, painted back to front so stack order is what you see */}
+        {stackedElements.map((element) =>
+          element.type === 'sticky' ? (
+            <StickyNote
+              key={element.id}
+              element={element}
+              isSelected={selectedIds.has(element.id)}
+              onSelect={(e) => handleElementSelect(element.id, e)}
+              onUpdate={(partial) => updateElement(element.id, partial)}
+              onDragStart={(e) => handleDragStart(element.id, pointerWorld(e), e)}
+              onAnchorDragStart={(anchor, e) => handleAnchorDragStart(element.id, anchor, e)}
+              onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(element.id, anchor)}
+              showAnchors={showAllAnchors}
+              highlightedAnchor={anchorHighlightFor(element.id)}
+              onResizeStart={(handle, e) => handleResizeStart(element.id, handle, e)}
+              onResizeByKeyboard={(handle, delta) =>
+                handleResizeByKeyboard(element.id, handle, delta)
+              }
+            />
+          ) : (
+            <ShapeItem
+              key={element.id}
+              element={element}
+              isSelected={selectedIds.has(element.id)}
+              onSelect={(e) => handleElementSelect(element.id, e)}
+              onUpdate={(partial) => updateElement(element.id, partial)}
+              onDragStart={(e) => handleDragStart(element.id, pointerWorld(e), e)}
+              onAnchorDragStart={(anchor, e) => handleAnchorDragStart(element.id, anchor, e)}
+              onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(element.id, anchor)}
+              showAnchors={showAllAnchors}
+              highlightedAnchor={anchorHighlightFor(element.id)}
+              onResizeStart={(handle, e) => handleResizeStart(element.id, handle, e)}
+              onResizeByKeyboard={(handle, delta) =>
+                handleResizeByKeyboard(element.id, handle, delta)
+              }
+            />
+          )
+        )}
 
         {/* Rubber-band selection */}
         {marquee && <SelectionOverlay start={marquee.start} current={marquee.current} />}
@@ -713,6 +745,7 @@ export default function App() {
           onFontSizeChange={handleFontSizeChange}
           onFontFamilyChange={handleFontFamilyChange}
           onArrowheadsChange={handleArrowheadsChange}
+          onStackChange={handleStackChange}
         />
       )}
       <ZoomControls viewport={viewport} onViewportChange={setViewport} />
