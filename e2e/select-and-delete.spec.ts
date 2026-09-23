@@ -17,9 +17,16 @@ async function addNote(page: Page, x: number, y: number) {
 async function connectTheNotes(page: Page) {
   const notes = page.locator('[data-testid^="sticky-"]')
   await notes.first().hover()
-  await notes.first().locator('[aria-label="Connect from bottom anchor"]').click({ force: true })
-  await notes.last().hover()
-  await notes.last().locator('[aria-label="Connect from top anchor"]').click({ force: true })
+  const from = (await notes
+    .first()
+    .locator('[aria-label="Connect from bottom anchor"]')
+    .boundingBox())!
+  const to = (await notes.last().boundingBox())!
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x + to.width / 2, to.y + 30, { steps: 12 })
+  await page.mouse.up()
 }
 
 test('an arrow can be clicked, then deleted', async ({ page }) => {

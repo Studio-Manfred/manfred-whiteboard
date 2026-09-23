@@ -121,3 +121,59 @@ describe('ConnectorLayer', () => {
     )
   })
 })
+
+describe('the arrow being dragged', () => {
+  const draft = {
+    from: { x: 200, y: 100 },
+    to: { x: 420, y: 160 },
+    fromAnchor: 'right' as const,
+    toAnchor: 'left' as const,
+    isSnapped: false,
+  }
+
+  function renderDraft(overrides: Partial<typeof draft> | null) {
+    render(
+      <ConnectorLayer
+        connectors={[]}
+        elementsById={elements}
+        selectedIds={new Set()}
+        onSelect={vi.fn()}
+        draft={overrides === null ? null : { ...draft, ...overrides }}
+      />
+    )
+  }
+
+  it('draws nothing when no arrow is being dragged', () => {
+    renderDraft(null)
+
+    expect(screen.queryByTestId('draft-arrow')).not.toBeInTheDocument()
+  })
+
+  it('previews the arrow from the anchor to the pointer', () => {
+    renderDraft({})
+    const path = screen.getByTestId('draft-arrow')
+
+    expect(path.getAttribute('d')).toMatch(/^M\s*200[,\s]/)
+    expect(path.getAttribute('d')).toContain('420')
+  })
+
+  it('is dashed while it has nowhere to land', () => {
+    renderDraft({ isSnapped: false })
+
+    expect(screen.getByTestId('draft-arrow')).toHaveAttribute('stroke-dasharray')
+  })
+
+  it('goes solid and blue the moment it snaps', () => {
+    renderDraft({ isSnapped: true })
+    const path = screen.getByTestId('draft-arrow')
+
+    expect(path).not.toHaveAttribute('stroke-dasharray')
+    expect(path.getAttribute('stroke')).toBe('#3b82f6')
+  })
+
+  it('never swallows pointer events — the drag is happening on the canvas', () => {
+    renderDraft({})
+
+    expect(screen.getByTestId('draft-arrow').getAttribute('pointer-events')).toBe('none')
+  })
+})

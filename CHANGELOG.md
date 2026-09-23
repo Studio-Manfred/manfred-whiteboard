@@ -15,6 +15,11 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Arrows are drawn by dragging from a connection dot: a preview follows the pointer,
+  every element shows its dots while an arrow is in flight, and coming near one snaps
+  the preview to it. Release on a snap to draw it, Escape to abandon. Dropping anywhere
+  over an element connects to its nearest dot. Keyboard route kept, since dragging is
+  pointer-only (STU-863).
 - Resize sticky notes and shapes by dragging any of eight handles — four corners and
   four edges — with shift to preserve proportions, a minimum size, and full arrow-key
   support from the keyboard (STU-860).
@@ -38,6 +43,9 @@ All notable changes to this project are documented here. The format follows
   changelog.
 
 ### Changed
+
+- Drawing an arrow no longer means clicking one dot and then another, with no feedback
+  in between; clicking an element's body no longer completes a half-drawn connector.
 
 - The toolbar is a `div` with `role="toolbar"` following the ARIA APG pattern — one tab
   stop, roving tabindex, arrow-key and Home/End focus movement — instead of a `nav`

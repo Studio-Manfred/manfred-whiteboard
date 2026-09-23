@@ -218,7 +218,7 @@ describe('App', () => {
     })
   })
 
-  it('connects two elements with the connector tool', () => {
+  it('connects two elements from the keyboard, one anchor then another', () => {
     render(<App />)
 
     pickTool('Sticky note')
@@ -227,12 +227,13 @@ describe('App', () => {
     clickCanvasAt(800, 300)
 
     const [first, second] = Array.from(stickies())
-    fireEvent.click(
-      first.querySelector('[aria-label="Connect from right anchor"]') as Element
-    )
-    fireEvent.click(
-      second.querySelector('[aria-label="Connect from left anchor"]') as Element
-    )
+    // detail 0 is how a browser reports Enter or Space on a button
+    fireEvent.click(first.querySelector('[aria-label="Connect from right anchor"]')!, {
+      detail: 0,
+    })
+    fireEvent.click(second.querySelector('[aria-label="Connect from left anchor"]')!, {
+      detail: 0,
+    })
 
     expect(document.querySelectorAll('[data-testid^="connector-"]')).toHaveLength(1)
   })
@@ -766,5 +767,128 @@ describe('App', () => {
 
     const width = parseFloat(stickies()[0].style.width)
     expect(width).toBeCloseTo(200)
+  })
+
+  function twoNotes() {
+    pickTool('Sticky note')
+    clickCanvasAt(300, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(800, 300)
+    return Array.from(stickies()) as HTMLElement[]
+  }
+
+  function anchorOf(note: HTMLElement, side: string) {
+    return note.querySelector(`[aria-label="Connect from ${side} anchor"]`) as Element
+  }
+
+  function connectors() {
+    return document.querySelectorAll('[data-testid^="connector-"]')
+  }
+
+  it('previews an arrow while it is being dragged out of an anchor', () => {
+    render(<App />)
+    const [first] = twoNotes()
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 520, clientY: 320 })
+
+    expect(screen.getByTestId('draft-arrow')).toBeInTheDocument()
+    expect(connectors()).toHaveLength(0)
+  })
+
+  it('shows every element its anchors while an arrow is in flight', () => {
+    render(<App />)
+    const [first, second] = twoNotes()
+
+    expect(anchorOf(second, 'left').className).toContain('opacity-0')
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+
+    expect(anchorOf(second, 'left').className).toContain('opacity-100')
+  })
+
+  it('snaps to a nearby anchor and marks it', () => {
+    render(<App />)
+    const [first, second] = twoNotes()
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    // Second note spans x 700-900; its left anchor is at (700, 300).
+    fireEvent.pointerMove(canvas(), { clientX: 680, clientY: 300 })
+
+    expect(anchorOf(second, 'left')).toHaveAttribute('data-snap-target', 'true')
+    expect(screen.getByTestId('draft-arrow').getAttribute('stroke')).toBe('#3b82f6')
+  })
+
+  it('creates the arrow when the drag is released on a snap', () => {
+    render(<App />)
+    const [first] = twoNotes()
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 680, clientY: 300 })
+    fireEvent.pointerUp(canvas(), { clientX: 680, clientY: 300 })
+
+    expect(connectors()).toHaveLength(1)
+    expect(screen.queryByTestId('draft-arrow')).not.toBeInTheDocument()
+  })
+
+  it('lands on an element dropped anywhere over its body', () => {
+    render(<App />)
+    const [first] = twoNotes()
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    // Deep inside the second note, nowhere near a dot.
+    fireEvent.pointerMove(canvas(), { clientX: 800, clientY: 300 })
+    fireEvent.pointerUp(canvas(), { clientX: 800, clientY: 300 })
+
+    expect(connectors()).toHaveLength(1)
+  })
+
+  it('creates nothing when the arrow is dropped on empty canvas', () => {
+    render(<App />)
+    const [first] = twoNotes()
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 520, clientY: 700 })
+    fireEvent.pointerUp(canvas(), { clientX: 520, clientY: 700 })
+
+    expect(connectors()).toHaveLength(0)
+    expect(screen.queryByTestId('draft-arrow')).not.toBeInTheDocument()
+  })
+
+  it('will not let an element connect to itself', () => {
+    render(<App />)
+    const [first] = twoNotes()
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 300, clientY: 400 })
+    fireEvent.pointerUp(canvas(), { clientX: 300, clientY: 400 })
+
+    expect(connectors()).toHaveLength(0)
+  })
+
+  it('abandons the arrow on Escape', () => {
+    render(<App />)
+    const [first] = twoNotes()
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 680, clientY: 300 })
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(screen.queryByTestId('draft-arrow')).not.toBeInTheDocument()
+
+    fireEvent.pointerUp(canvas(), { clientX: 680, clientY: 300 })
+    expect(connectors()).toHaveLength(0)
+  })
+
+  it('does not drag the note itself when starting from its anchor', () => {
+    render(<App />)
+    const [first] = twoNotes()
+    const before = first.style.left
+
+    fireEvent.pointerDown(anchorOf(first, 'right'), { clientX: 400, clientY: 300 })
+    fireEvent.pointerMove(canvas(), { clientX: 520, clientY: 360 })
+    fireEvent.pointerUp(canvas(), { clientX: 520, clientY: 360 })
+
+    expect((stickies()[0] as HTMLElement).style.left).toBe(before)
   })
 })

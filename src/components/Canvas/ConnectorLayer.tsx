@@ -1,18 +1,31 @@
 import React from 'react'
 import type {
+  AnchorPosition,
   ConnectorElement,
   BoardElement,
 } from '../../types/whiteboard'
+import type { Point } from '../../lib/coordinates'
 import {
   getAnchorPosition,
   calculateBezierPath,
 } from '../../lib/connector-math'
+
+/** The arrow currently being dragged out of an anchor, if any. */
+export interface ConnectorDraft {
+  from: Point
+  to: Point
+  fromAnchor: AnchorPosition
+  toAnchor: AnchorPosition
+  /** True once the pointer is close enough to land on something. */
+  isSnapped: boolean
+}
 
 interface ConnectorLayerProps {
   connectors: ConnectorElement[]
   elementsById: Map<string, BoardElement>
   selectedIds: Set<string>
   onSelect: (id: string, e: React.MouseEvent) => void
+  draft?: ConnectorDraft | null
 }
 
 export function ConnectorLayer({
@@ -20,6 +33,7 @@ export function ConnectorLayer({
   elementsById,
   selectedIds,
   onSelect,
+  draft,
 }: ConnectorLayerProps) {
   return (
     <svg
@@ -100,6 +114,23 @@ export function ConnectorLayer({
           </g>
         )
       })}
+
+      {draft && (
+        <path
+          data-testid="draft-arrow"
+          d={
+            calculateBezierPath(draft.from, draft.to, draft.fromAnchor, draft.toAnchor)
+              .pathData
+          }
+          fill="none"
+          stroke={draft.isSnapped ? '#3b82f6' : '#94a3b8'}
+          strokeWidth={2}
+          strokeLinecap="round"
+          {...(draft.isSnapped ? {} : { strokeDasharray: '6 6' })}
+          markerEnd={draft.isSnapped ? 'url(#arrowhead-selected)' : 'url(#arrowhead)'}
+          pointerEvents="none"
+        />
+      )}
     </svg>
   )
 }
