@@ -1298,4 +1298,50 @@ describe('App', () => {
 
     expect(ink()[0].querySelector('[data-ink="pen"]')!.getAttribute('fill')).toBe('#dc2626')
   })
+
+  it('moves a stroke, ink and all', () => {
+    render(<App />)
+    drawStroke(200, 400, 300)
+    const hitArea = () => ink()[0].querySelectorAll('path')[0]
+    fireEvent.pointerDown(hitArea(), { clientX: 300, clientY: 315 })
+
+    const item = () => ink()[0] as HTMLElement
+    const inkPath = () => ink()[0].querySelector('[data-ink="pen"]')!.getAttribute('d')
+    const left = parseFloat(item().style.left)
+    const pathBefore = inkPath()
+
+    fireEvent.pointerDown(hitArea(), { clientX: 300, clientY: 315 })
+    fireEvent.pointerMove(canvas(), { clientX: 400, clientY: 315 })
+    fireEvent.pointerUp(canvas(), { clientX: 400, clientY: 315 })
+
+    // The box moves...
+    expect(parseFloat(item().style.left)).toBeCloseTo(left + 100)
+    // ...and so does the ink. Moving the box alone would cancel against the
+    // svg viewBox and leave the stroke exactly where it was.
+    expect(inkPath()).not.toBe(pathBefore)
+  })
+
+  it('moves a stroke along with a selection it belongs to', () => {
+    render(<App />)
+    drawStroke(200, 400, 300)
+    pickTool('Sticky note')
+    clickCanvasAt(600, 500)
+
+    // marquee over both
+    fireEvent.pointerDown(canvas(), { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(canvas(), { clientX: 900, clientY: 700 })
+    fireEvent.pointerUp(canvas(), { clientX: 900, clientY: 700 })
+
+    const inkPath = () => ink()[0].querySelector('[data-ink="pen"]')!.getAttribute('d')
+    const noteLeft = () => parseFloat((stickies()[0] as HTMLElement).style.left)
+    const pathBefore = inkPath()
+    const before = noteLeft()
+
+    fireEvent.pointerDown(stickies()[0], { clientX: 600, clientY: 500 })
+    fireEvent.pointerMove(canvas(), { clientX: 650, clientY: 500 })
+    fireEvent.pointerUp(canvas(), { clientX: 650, clientY: 500 })
+
+    expect(noteLeft()).toBeCloseTo(before + 50)
+    expect(inkPath()).not.toBe(pathBefore)
+  })
 })

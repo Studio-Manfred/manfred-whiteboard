@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { scalePoints } from '../src/lib/scale-points'
+import { scalePoints, translatePoints } from '../src/lib/scale-points'
 import type { InkPoint } from '../src/lib/ink'
 
 const from = { x: 0, y: 0, width: 100, height: 100 }
@@ -85,3 +85,26 @@ describe('scalePoints', () => {
     expect(scalePoints([], from, from)).toEqual([])
   })
 })
+
+describe('translatePoints', () => {
+  it('moves every point by the same offset', () => {
+    expect(translatePoints(points, 10, -5)).toEqual([
+      { x: 10, y: -5 },
+      { x: 60, y: 95 },
+      { x: 110, y: 45 },
+    ])
+  })
+
+  it('leaves points alone for a zero offset', () => {
+    expect(translatePoints(points, 0, 0)).toEqual(points)
+  })
+
+  it('keeps stylus pressure, which a move does not change', () => {
+    expect(translatePoints([{ x: 0, y: 0, p: 0.7 }], 5, 5)).toEqual([{ x: 5, y: 5, p: 0.7 }])
+  })
+
+  it('copes with no points', () => {
+    expect(translatePoints([], 10, 10)).toEqual([])
+  })
+})
+

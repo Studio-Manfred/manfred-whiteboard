@@ -95,3 +95,29 @@ test('resizes a freehand stroke, scaling the ink itself', async ({ page }) => {
   await expect(page.getByRole('button', { name: /^Resize from/ })).toHaveCount(8)
 })
 
+test('moves a freehand stroke, ink and all', async ({ page }) => {
+  await page.goto(`/#room=move-ink-${Date.now()}`)
+
+  await page.getByRole('button', { name: 'Pen' }).click()
+  await page.mouse.move(150, 250)
+  await page.mouse.down()
+  for (const [x, y] of [[210, 320], [270, 260]]) await page.mouse.move(x, y, { steps: 8 })
+  await page.mouse.up()
+  await page.getByRole('button', { name: 'Select' }).click()
+
+  const ink = page.locator('[data-testid^="drawing-"] [data-ink="pen"]').first()
+  const before = (await ink.boundingBox())!
+
+  // Grab the stroke itself and drag it.
+  await page.mouse.move(153, 253)
+  await page.mouse.down()
+  await page.mouse.move(253, 253, { steps: 12 })
+  await page.mouse.up()
+
+  const after = (await ink.boundingBox())!
+  // The ink has to move on screen, not merely its bounding box: the points are
+  // world coordinates and the svg viewBox follows the box, so moving the box
+  // alone cancels out and the stroke stays put.
+  expect(after.x).toBeGreaterThan(before.x + 50)
+})
+
