@@ -60,7 +60,25 @@ The canvas is operable without a pointer. Tab to it, then:
 | `Cmd/Ctrl + Shift + Z` | Redo |
 | `Delete` / `Backspace` | Delete the selection |
 | `Shift` + click | Add an element to the selection, or remove it |
+| `Enter` on a connection dot | Start an arrow, then finish it on another dot |
+| `Escape` | Abandon the arrow being drawn |
 | Arrow keys on a resize handle | Resize the element (shift for a bigger step) |
+
+## Drawing arrows
+
+Hover a note or shape and four blue dots appear on its edges. Press one and drag: a
+preview arrow follows the pointer, every element on the board shows its own dots, and
+coming near one snaps the preview to it and marks the target. Release to draw the arrow;
+release anywhere else and nothing is created. Escape abandons it mid-drag. Dropping
+anywhere over an element counts — it connects to whichever of its dots is nearest.
+
+The connector tool (`L`) simply keeps every element's dots on show, so you can start a
+drag without hovering first.
+
+Dragging is pointer-only, so there is a keyboard route to the same thing: tab to a dot
+and press Enter, then do the same on another element's dot.
+
+## Resizing
 
 Selecting a sticky note or shape puts eight handles on it — one per corner and edge.
 Dragging a corner moves two edges, an edge moves one, and the opposite side stays put;

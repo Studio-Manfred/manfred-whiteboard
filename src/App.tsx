@@ -23,6 +23,8 @@ import { partitionElements, findElementAt } from './lib/board-selectors'
 import { elementsInMarquee, rectFromPoints } from './lib/marquee'
 import { boardBounds, boardToJson, boardToSvg } from './lib/board-export'
 import { resizeRect, type ResizeHandle } from './lib/resize'
+import { findSnapTarget, type AnchorCandidate } from './lib/connector-drag'
+import { getAnchorPosition } from './lib/connector-math'
 import { boardFilename, downloadBlob, svgToPngBlob } from './lib/download'
 import {
   colorPatchFor,
@@ -54,10 +56,18 @@ export default function App() {
   const [drawingPoints, setDrawingPoints] = useState<Array<{ x: number; y: number }>>([])
   const isDrawing = useRef(false)
 
-  // Connector creation state
-  const [pendingConnector, setPendingConnector] = useState<{
+  /** An arrow being dragged out of an anchor. */
+  const [connectorDrag, setConnectorDrag] = useState<{
     fromId: string
     fromAnchor: AnchorPosition
+    pointer: Point
+    snap: AnchorCandidate | null
+  } | null>(null)
+
+  /** The keyboard route to the same thing: activate one anchor, then another. */
+  const [pendingAnchor, setPendingAnchor] = useState<{
+    elementId: string
+    anchor: AnchorPosition
   } | null>(null)
 
   // Drag state
@@ -139,6 +149,12 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
+      if (e.key === 'Escape') {
+        setConnectorDrag(null)
+        setPendingAnchor(null)
+        return
+      }
+
       const key = e.key.toLowerCase()
       const shortcutTool = toolForShortcut(key)
 
@@ -190,7 +206,7 @@ export default function App() {
       // up as a zero-size marquee, which selects nothing — i.e. deselects.
       if (activeTool === 'select') {
         setSelectedIds(new Set())
-        setPendingConnector(null)
+        setPendingAnchor(null)
         setMarquee({ start: worldPoint, current: worldPoint })
         return
       }
@@ -264,6 +280,16 @@ export default function App() {
         return
       }
 
+      // An arrow is being dragged out of an anchor
+      if (connectorDrag) {
+        setConnectorDrag({
+          ...connectorDrag,
+          pointer: worldPoint,
+          snap: findSnapTarget(elements, worldPoint, { excludeId: connectorDrag.fromId }),
+        })
+        return
+      }
+
       // Rubber-band selection, updated live so the user sees what they will get
       if (marquee) {
         setMarquee({ start: marquee.start, current: worldPoint })
@@ -289,7 +315,7 @@ export default function App() {
         })
       }
     },
-    [activeTool, marquee, elements]
+    [activeTool, marquee, elements, connectorDrag]
   )
 
   const handleCanvasPointerUp = useCallback(
@@ -306,6 +332,25 @@ export default function App() {
 
       resizeState.current = null
 
+      // Land the arrow, or drop it if it never found a target.
+      if (connectorDrag) {
+        if (connectorDrag.snap) {
+          createElement(
+            createConnectorElement(
+              {
+                fromId: connectorDrag.fromId,
+                fromAnchor: connectorDrag.fromAnchor,
+                toId: connectorDrag.snap.elementId,
+                toAnchor: connectorDrag.snap.anchor,
+              },
+              { zIndex: elements.size + 1 }
+            )
+          )
+        }
+        setConnectorDrag(null)
+        return
+      }
+
       // Finish the rubber band; the selection it produced stays put.
       if (marquee) {
         setMarquee(null)
@@ -315,28 +360,12 @@ export default function App() {
       // Finish drag
       dragState.current = null
     },
-    [activeTool, drawingPoints, elements, createElement, marquee]
+    [activeTool, drawingPoints, elements, createElement, marquee, connectorDrag]
   )
 
   // ----------- Element event handlers -----------
   const handleElementSelect = useCallback((id: string, e: React.PointerEvent | React.MouseEvent) => {
     e.stopPropagation()
-    if (activeTool === 'connector' && pendingConnector) {
-      createElement(
-        createConnectorElement(
-          {
-            fromId: pendingConnector.fromId,
-            fromAnchor: pendingConnector.fromAnchor,
-            toId: id,
-            toAnchor: 'left',
-          },
-          { zIndex: elements.size + 1 }
-        )
-      )
-      setPendingConnector(null)
-      setActiveTool('select')
-      return
-    }
 
     const additive = 'shiftKey' in e && e.shiftKey
     setSelectedIds((previous) => {
@@ -348,7 +377,7 @@ export default function App() {
       else next.add(id)
       return next
     })
-  }, [activeTool, pendingConnector, elements, createElement])
+  }, [])
 
   /** Where a pointer event sits in board coordinates. */
   const pointerWorld = useCallback(
@@ -376,30 +405,50 @@ export default function App() {
     [elements, selectedIds]
   )
 
-  const handleAnchorClick = useCallback((elementId: string, anchor: AnchorPosition) => {
-    if (pendingConnector) {
+  // ----------- Connectors -----------
+  const connectElements = useCallback(
+    (fromId: string, fromAnchor: AnchorPosition, toId: string, toAnchor: AnchorPosition) => {
       createElement(
         createConnectorElement(
-          {
-            fromId: pendingConnector.fromId,
-            fromAnchor: pendingConnector.fromAnchor,
-            toId: elementId,
-            toAnchor: anchor,
-          },
+          { fromId, fromAnchor, toId, toAnchor },
           { zIndex: elements.size + 1 }
         )
       )
-      setPendingConnector(null)
-    } else {
-      setPendingConnector({ fromId: elementId, fromAnchor: anchor })
-      setActiveTool('connector')
-    }
-  }, [pendingConnector, elements, createElement])
+    },
+    [elements, createElement]
+  )
 
-  // Presence shows everything the user has selected, not just the last click.
-  useEffect(() => {
-    connectionRef.current?.awareness?.setLocalStateField('selection', Array.from(selectedIds))
-  }, [selectedIds])
+  const handleAnchorDragStart = useCallback(
+    (id: string, anchor: AnchorPosition, e: React.PointerEvent) => {
+      const el = elements.get(id)
+      if (!el) return
+
+      setPendingAnchor(null)
+      setConnectorDrag({
+        fromId: id,
+        fromAnchor: anchor,
+        pointer: getAnchorPosition(el, anchor),
+        snap: null,
+      })
+      // Keep receiving moves even if the pointer leaves the small anchor.
+      e.currentTarget.releasePointerCapture?.(e.pointerId)
+    },
+    [elements]
+  )
+
+  /** Enter or Space on an anchor: pick a start, then pick an end. */
+  const handleAnchorKeyActivate = useCallback(
+    (id: string, anchor: AnchorPosition) => {
+      if (pendingAnchor && pendingAnchor.elementId !== id) {
+        connectElements(pendingAnchor.elementId, pendingAnchor.anchor, id, anchor)
+        setPendingAnchor(null)
+        return
+      }
+
+      setPendingAnchor({ elementId: id, anchor })
+    },
+    [pendingAnchor, connectElements]
+  )
 
   // ----------- Resize -----------
   const handleResizeStart = useCallback(
@@ -488,6 +537,37 @@ export default function App() {
     defaultFill ??
     PASTEL_COLORS[0]
 
+  // While an arrow is in flight — or the connector tool is up — every element
+  // shows its anchors, so the possible destinations are visible.
+  const showAllAnchors = Boolean(connectorDrag || pendingAnchor) || activeTool === 'connector'
+
+  const anchorHighlightFor = (id: string): AnchorPosition | null => {
+    if (connectorDrag?.snap?.elementId === id) return connectorDrag.snap.anchor
+    if (pendingAnchor?.elementId === id) return pendingAnchor.anchor
+    return null
+  }
+
+  const connectorDraft = (() => {
+    if (!connectorDrag) return null
+    const from = elements.get(connectorDrag.fromId)
+    if (!from) return null
+
+    const opposite: Record<AnchorPosition, AnchorPosition> = {
+      top: 'bottom',
+      bottom: 'top',
+      left: 'right',
+      right: 'left',
+    }
+
+    return {
+      from: getAnchorPosition(from, connectorDrag.fromAnchor),
+      to: connectorDrag.snap?.point ?? connectorDrag.pointer,
+      fromAnchor: connectorDrag.fromAnchor,
+      toAnchor: connectorDrag.snap?.anchor ?? opposite[connectorDrag.fromAnchor],
+      isSnapped: Boolean(connectorDrag.snap),
+    }
+  })()
+
   // ----------- Derived element lists -----------
   const { stickies, shapes, connectors, drawings } = partitionElements(elements)
 
@@ -525,6 +605,7 @@ export default function App() {
           elementsById={elements}
           selectedIds={selectedIds}
           onSelect={(id, e) => handleElementSelect(id, e)}
+          draft={connectorDraft}
         />
 
         {/* Shapes */}
@@ -536,7 +617,10 @@ export default function App() {
             onSelect={(e) => handleElementSelect(shape.id, e)}
             onUpdate={(partial) => updateElement(shape.id, partial)}
             onDragStart={(e) => handleDragStart(shape.id, pointerWorld(e), e)}
-            onAnchorClick={(anchor) => handleAnchorClick(shape.id, anchor)}
+            onAnchorDragStart={(anchor, e) => handleAnchorDragStart(shape.id, anchor, e)}
+            onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(shape.id, anchor)}
+            showAnchors={showAllAnchors}
+            highlightedAnchor={anchorHighlightFor(shape.id)}
             onResizeStart={(handle, e) => handleResizeStart(shape.id, handle, e)}
             onResizeByKeyboard={(handle, delta) =>
               handleResizeByKeyboard(shape.id, handle, delta)
@@ -553,7 +637,10 @@ export default function App() {
             onSelect={(e) => handleElementSelect(sticky.id, e)}
             onUpdate={(partial) => updateElement(sticky.id, partial)}
             onDragStart={(e) => handleDragStart(sticky.id, pointerWorld(e), e)}
-            onAnchorClick={(anchor) => handleAnchorClick(sticky.id, anchor)}
+            onAnchorDragStart={(anchor, e) => handleAnchorDragStart(sticky.id, anchor, e)}
+            onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(sticky.id, anchor)}
+            showAnchors={showAllAnchors}
+            highlightedAnchor={anchorHighlightFor(sticky.id)}
             onResizeStart={(handle, e) => handleResizeStart(sticky.id, handle, e)}
             onResizeByKeyboard={(handle, delta) =>
               handleResizeByKeyboard(sticky.id, handle, delta)

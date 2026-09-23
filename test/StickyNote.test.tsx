@@ -169,7 +169,7 @@ describe('StickyNote Component', () => {
   })
 
   it('offers a labelled connection anchor on each side', () => {
-    const onAnchorClick = vi.fn()
+    const onAnchorDragStart = vi.fn()
     render(
       <StickyNote
         element={sampleSticky}
@@ -177,7 +177,7 @@ describe('StickyNote Component', () => {
         onSelect={vi.fn()}
         onUpdate={vi.fn()}
         onDragStart={vi.fn()}
-        onAnchorClick={onAnchorClick}
+        onAnchorDragStart={onAnchorDragStart}
       />
     )
 
@@ -187,8 +187,8 @@ describe('StickyNote Component', () => {
       ).toBeInTheDocument()
     }
 
-    fireEvent.click(screen.getByRole('button', { name: 'Connect from bottom anchor' }))
-    expect(onAnchorClick).toHaveBeenCalledWith('bottom', expect.anything())
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Connect from bottom anchor' }))
+    expect(onAnchorDragStart).toHaveBeenCalledWith('bottom', expect.anything())
   })
 
   it('shows resize handles only when selected and resizable', () => {
@@ -259,7 +259,7 @@ describe('StickyNote Component', () => {
         onSelect={onSelect}
         onUpdate={vi.fn()}
         onDragStart={onDragStart}
-        onAnchorClick={vi.fn()}
+        onAnchorDragStart={vi.fn()}
       />
     )
 
@@ -269,5 +269,71 @@ describe('StickyNote Component', () => {
 
     expect(onSelect).not.toHaveBeenCalled()
     expect(onDragStart).not.toHaveBeenCalled()
+  })
+  it('starts dragging an arrow when an anchor is pressed', () => {
+    const onAnchorDragStart = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        onAnchorDragStart={onAnchorDragStart}
+      />
+    )
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Connect from top anchor' }))
+
+    expect(onAnchorDragStart).toHaveBeenCalledWith('top', expect.anything())
+  })
+
+  it('offers a keyboard route, since a drag is pointer-only', () => {
+    const onAnchorKeyActivate = vi.fn()
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        onAnchorKeyActivate={onAnchorKeyActivate}
+      />
+    )
+    const anchor = screen.getByRole('button', { name: 'Connect from left anchor' })
+
+    // detail 0 is how a browser reports Enter or Space on a button
+    fireEvent.click(anchor, { detail: 0 })
+    expect(onAnchorKeyActivate).toHaveBeenCalledWith('left')
+
+    // a real mouse click carries detail >= 1 and must not double-fire
+    onAnchorKeyActivate.mockClear()
+    fireEvent.click(anchor, { detail: 1 })
+    expect(onAnchorKeyActivate).not.toHaveBeenCalled()
+  })
+
+  it('shows its anchors on demand and marks the one an arrow would land on', () => {
+    render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        showAnchors
+        highlightedAnchor="right"
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Connect from top anchor' }).className).toContain(
+      'opacity-100'
+    )
+    expect(screen.getByRole('button', { name: 'Connect from right anchor' })).toHaveAttribute(
+      'data-snap-target',
+      'true'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Connect from top anchor' })
+    ).not.toHaveAttribute('data-snap-target')
   })
 })

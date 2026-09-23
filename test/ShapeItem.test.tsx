@@ -127,13 +127,13 @@ describe('ShapeItem', () => {
     }
   })
 
-  it('reports which anchor was clicked without also selecting the shape', () => {
-    const onAnchorClick = vi.fn()
-    const { handlers } = renderShape({}, { onAnchorClick })
+  it('starts an arrow from an anchor without also selecting the shape', () => {
+    const onAnchorDragStart = vi.fn()
+    const { handlers } = renderShape({}, { onAnchorDragStart })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Connect from right anchor' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Connect from right anchor' }))
 
-    expect(onAnchorClick).toHaveBeenCalledWith('right', expect.anything())
+    expect(onAnchorDragStart).toHaveBeenCalledWith('right', expect.anything())
     expect(handlers.onSelect).not.toHaveBeenCalled()
   })
 
@@ -205,7 +205,7 @@ describe('ShapeItem', () => {
         onSelect={onSelect}
         onUpdate={vi.fn()}
         onDragStart={onDragStart}
-        onAnchorClick={vi.fn()}
+        onAnchorDragStart={vi.fn()}
       />
     )
 
@@ -215,5 +215,71 @@ describe('ShapeItem', () => {
 
     expect(onSelect).not.toHaveBeenCalled()
     expect(onDragStart).not.toHaveBeenCalled()
+  })
+  it('starts dragging an arrow when an anchor is pressed', () => {
+    const onAnchorDragStart = vi.fn()
+    render(
+      <ShapeItem
+        element={rectangle}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        onAnchorDragStart={onAnchorDragStart}
+      />
+    )
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Connect from top anchor' }))
+
+    expect(onAnchorDragStart).toHaveBeenCalledWith('top', expect.anything())
+  })
+
+  it('offers a keyboard route, since a drag is pointer-only', () => {
+    const onAnchorKeyActivate = vi.fn()
+    render(
+      <ShapeItem
+        element={rectangle}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        onAnchorKeyActivate={onAnchorKeyActivate}
+      />
+    )
+    const anchor = screen.getByRole('button', { name: 'Connect from left anchor' })
+
+    // detail 0 is how a browser reports Enter or Space on a button
+    fireEvent.click(anchor, { detail: 0 })
+    expect(onAnchorKeyActivate).toHaveBeenCalledWith('left')
+
+    // a real mouse click carries detail >= 1 and must not double-fire
+    onAnchorKeyActivate.mockClear()
+    fireEvent.click(anchor, { detail: 1 })
+    expect(onAnchorKeyActivate).not.toHaveBeenCalled()
+  })
+
+  it('shows its anchors on demand and marks the one an arrow would land on', () => {
+    render(
+      <ShapeItem
+        element={rectangle}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+        showAnchors
+        highlightedAnchor="right"
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Connect from top anchor' }).className).toContain(
+      'opacity-100'
+    )
+    expect(screen.getByRole('button', { name: 'Connect from right anchor' })).toHaveAttribute(
+      'data-snap-target',
+      'true'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Connect from top anchor' })
+    ).not.toHaveAttribute('data-snap-target')
   })
 })
