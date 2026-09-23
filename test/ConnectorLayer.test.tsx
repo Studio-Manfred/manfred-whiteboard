@@ -97,6 +97,20 @@ describe('ConnectorLayer', () => {
     expect(visible.getAttribute('marker-end')).toBe('url(#arrowhead-selected)')
   })
 
+  it('glows when selected, through a style the browser will honour', () => {
+    const { container } = renderLayer([connector()], ['c1'])
+    const visible = container.querySelectorAll('path')[1] as SVGPathElement
+
+    expect(visible.style.filter).toContain('drop-shadow')
+  })
+
+  it('does not glow when unselected', () => {
+    const { container } = renderLayer([connector()])
+    const visible = container.querySelectorAll('path')[1] as SVGPathElement
+
+    expect(visible.style.filter).toBe('')
+  })
+
   it('uses its own stroke colour when unselected', () => {
     const { container } = renderLayer([connector({ strokeColor: '#111827' })])
     const visible = container.querySelectorAll('path')[1]

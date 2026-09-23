@@ -8,6 +8,7 @@ import {
   fontFamilyStack,
   textPaddingFor,
 } from '../../lib/element-style'
+import { dropShadowFilter, elevationFor } from '../../lib/elevation'
 
 interface ShapeItemProps {
   element: ShapeElement
@@ -25,6 +26,8 @@ interface ShapeItemProps {
   highlightedAnchor?: AnchorPosition | null
   onResizeStart?: (handle: ResizeHandle, e: React.PointerEvent) => void
   onResizeByKeyboard?: (handle: ResizeHandle, delta: Point) => void
+  /** Lifts the shape while it is actually being moved. */
+  isDragging?: boolean
 }
 
 export function ShapeItem({
@@ -37,6 +40,7 @@ export function ShapeItem({
   onAnchorKeyActivate,
   showAnchors = false,
   highlightedAnchor = null,
+  isDragging = false,
   onResizeStart,
   onResizeByKeyboard,
 }: ShapeItemProps) {
@@ -64,6 +68,9 @@ export function ShapeItem({
 
   const anchors: AnchorPosition[] = ['top', 'right', 'bottom', 'left']
   const textPadding = textPaddingFor(element) ?? 0
+  // A shape is often transparent and may be a circle, so the shadow has to
+  // follow its outline rather than a box around it.
+  const elevation = dropShadowFilter(elevationFor({ isSelected, isDragging }))
 
   return (
     <div
@@ -88,7 +95,10 @@ export function ShapeItem({
         setIsEditing(true)
       }}
     >
-      <svg className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
+      <svg
+        className="absolute inset-0 w-full h-full overflow-visible pointer-events-none transition-[filter]"
+        style={{ filter: elevation }}
+      >
         {element.shapeType === 'circle' ? (
           <ellipse
             cx={element.width / 2}

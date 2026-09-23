@@ -132,6 +132,11 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
      element no user could reach. Anything whose behaviour depends on pointer-events,
      z-order or overlap needs an E2E test. Same family as the jsdom `PointerEvent` gap
      logged above.
+- **Recurred 2026-09-23** (STU-869): `ConnectorLayer` passed
+  `'filter drop-shadow(0 0 4px rgba(59,130,246,0.5))'` as a **className**, so the selected
+  arrow's glow had never once rendered. Second instance of the same mistake in two weeks —
+  a CSS value written where a utility class was expected. **Anything with parentheses or
+  spaces in it is a style, not a class.**
 - **Graduated to:** candidate for `my-process/docs/knowledge/` alongside the
   PointerEvent entry — together they say "jsdom does not do layout, so test anything
   spatial in a real browser."

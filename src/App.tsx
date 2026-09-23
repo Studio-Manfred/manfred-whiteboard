@@ -80,6 +80,9 @@ export default function App() {
     origins: Map<string, Point>
   } | null>(null)
 
+  /** Ids currently being moved, so they can be shown lifted. */
+  const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set())
+
   /** Rubber-band selection in world coordinates; null when not dragging one. */
   const [marquee, setMarquee] = useState<{ start: Point; current: Point } | null>(null)
 
@@ -304,6 +307,10 @@ export default function App() {
       // Drag move — every selected element travels together
       if (dragState.current) {
         const { startWorld, origins } = dragState.current
+
+        // Lift on the first actual movement, not on the press: a plain click
+        // to select should not make the element jump.
+        if (draggingIds.size === 0) setDraggingIds(new Set(origins.keys()))
         const dx = worldPoint.x - startWorld.x
         const dy = worldPoint.y - startWorld.y
 
@@ -318,7 +325,7 @@ export default function App() {
         })
       }
     },
-    [activeTool, marquee, elements, connectorDrag]
+    [activeTool, marquee, elements, connectorDrag, draggingIds]
   )
 
   const handleCanvasPointerUp = useCallback(
@@ -334,6 +341,7 @@ export default function App() {
       }
 
       resizeState.current = null
+      if (draggingIds.size > 0) setDraggingIds(new Set())
 
       // Land the arrow, or drop it if it never found a target.
       if (connectorDrag) {
@@ -363,7 +371,7 @@ export default function App() {
       // Finish drag
       dragState.current = null
     },
-    [activeTool, drawingPoints, elements, createElement, marquee, connectorDrag]
+    [activeTool, drawingPoints, elements, createElement, marquee, connectorDrag, draggingIds]
   )
 
   // ----------- Element event handlers -----------
@@ -699,6 +707,7 @@ export default function App() {
               key={element.id}
               element={element}
               isSelected={selectedIds.has(element.id)}
+              isDragging={draggingIds.has(element.id)}
               onSelect={(e) => handleElementSelect(element.id, e)}
               onUpdate={(partial) => updateElement(element.id, partial)}
               onDragStart={(e) => handleDragStart(element.id, pointerWorld(e), e)}
@@ -716,6 +725,7 @@ export default function App() {
               key={element.id}
               element={element}
               isSelected={selectedIds.has(element.id)}
+              isDragging={draggingIds.has(element.id)}
               onSelect={(e) => handleElementSelect(element.id, e)}
               onUpdate={(partial) => updateElement(element.id, partial)}
               onDragStart={(e) => handleDragStart(element.id, pointerWorld(e), e)}

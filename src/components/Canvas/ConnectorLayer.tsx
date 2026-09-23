@@ -143,7 +143,10 @@ export function ConnectorLayer({
                   ? `url(#arrowhead${suffix})`
                   : undefined
               }
-              className={`transition-colors ${isSelected ? 'filter drop-shadow(0 0 4px rgba(59,130,246,0.5))' : ''}`}
+              className="transition-colors"
+              // Was a className, which Tailwind generates nothing for, so the
+              // glow never rendered.
+              style={isSelected ? { filter: 'drop-shadow(0 0 4px rgba(59,130,246,0.5))' } : undefined}
             />
           </g>
         )
