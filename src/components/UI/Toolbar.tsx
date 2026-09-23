@@ -1,7 +1,5 @@
 import React, { useRef } from 'react'
 import type { CanvasTool } from '../Canvas/CanvasViewport'
-import { ColorPicker } from './ColorPicker'
-import type { ColorTarget } from '../../lib/element-colors'
 import {
   MousePointer2,
   Hand,
@@ -16,12 +14,6 @@ import {
 interface ToolbarProps {
   activeTool: CanvasTool
   onToolChange: (tool: CanvasTool) => void
-  color: {
-    /** Current fill: the selection's, or the colour the next note will take. */
-    value: string
-    showBorder: boolean
-    onSelect: (color: string, target: ColorTarget) => void
-  }
 }
 
 const TOOLS: Array<{ tool: CanvasTool; icon: React.ElementType; label: string; shortcut?: string }> =
@@ -36,13 +28,13 @@ const TOOLS: Array<{ tool: CanvasTool; icon: React.ElementType; label: string; s
     { tool: 'eraser', icon: Eraser, label: 'Eraser', shortcut: 'E' },
   ]
 
-export function Toolbar({ activeTool, onToolChange, color }: ToolbarProps) {
+export function Toolbar({ activeTool, onToolChange }: ToolbarProps) {
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   // APG toolbar pattern: the toolbar is one tab stop and arrow keys move focus
   // between the tools. Focus alone never changes the active tool.
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
-    const lastIndex = TOOLS.length // the colour trigger sits after the tools
+    const lastIndex = TOOLS.length - 1
     let nextIndex: number | null = null
 
     switch (e.key) {
@@ -108,19 +100,6 @@ export function Toolbar({ activeTool, onToolChange, color }: ToolbarProps) {
           </button>
         )
       })}
-
-      <span aria-hidden="true" className="w-px h-6 bg-slate-200 mx-1" />
-
-      <ColorPicker
-        value={color.value}
-        showBorder={color.showBorder}
-        onSelect={color.onSelect}
-        tabIndex={activeIndex === TOOLS.length ? 0 : -1}
-        onKeyDown={(e) => handleKeyDown(e, TOOLS.length)}
-        buttonRef={(el) => {
-          buttonRefs.current[TOOLS.length] = el
-        }}
-      />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import type { ShapeElement, AnchorPosition } from '../../types/whiteboard'
 import { ResizeHandles } from './ResizeHandles'
 import type { ResizeHandle } from '../../lib/resize'
 import type { Point } from '../../lib/coordinates'
+import { fontFamilyStack } from '../../lib/element-style'
 
 interface ShapeItemProps {
   element: ShapeElement
@@ -121,10 +122,20 @@ export function ShapeItem({
                 handleBlur()
               }
             }}
-            className="w-full bg-transparent text-center outline-none font-medium text-slate-800 text-sm"
+            style={{
+              fontSize: `${element.fontSize || 14}px`,
+              fontFamily: fontFamilyStack(element.fontFamily),
+            }}
+            className="w-full bg-transparent text-center outline-none font-medium text-slate-800"
           />
         ) : (
-          <span className="text-slate-800 font-medium text-sm break-words">
+          <span
+            style={{
+              fontSize: `${element.fontSize || 14}px`,
+              fontFamily: fontFamilyStack(element.fontFamily),
+            }}
+            className="text-slate-800 font-medium break-words"
+          >
             {element.text}
           </span>
         )}

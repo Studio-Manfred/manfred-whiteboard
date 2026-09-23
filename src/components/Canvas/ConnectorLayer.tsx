@@ -9,6 +9,7 @@ import {
   getAnchorPosition,
   calculateBezierPath,
 } from '../../lib/connector-math'
+import { arrowheadsOf } from '../../lib/element-style'
 
 /** The arrow currently being dragged out of an anchor, if any. */
 export interface ConnectorDraft {
@@ -56,6 +57,28 @@ export function ConnectorLayer({
           />
         </marker>
         <marker
+          id="arrowhead-start"
+          markerWidth="10"
+          markerHeight="7"
+          refX="0"
+          refY="3.5"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <polygon points="10 0, 0 3.5, 10 7" fill="#475569" />
+        </marker>
+        <marker
+          id="arrowhead-start-selected"
+          markerWidth="10"
+          markerHeight="7"
+          refX="0"
+          refY="3.5"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <polygon points="10 0, 0 3.5, 10 7" fill="#3b82f6" />
+        </marker>
+        <marker
           id="arrowhead-selected"
           markerWidth="10"
           markerHeight="7"
@@ -86,6 +109,8 @@ export function ConnectorLayer({
         )
 
         const isSelected = selectedIds.has(connector.id)
+        const heads = arrowheadsOf(connector)
+        const suffix = isSelected ? '-selected' : ''
 
         return (
           <g key={connector.id} data-testid={`connector-${connector.id}`}>
@@ -108,7 +133,16 @@ export function ConnectorLayer({
               stroke={isSelected ? '#3b82f6' : connector.strokeColor || '#475569'}
               strokeWidth={connector.strokeWidth || 2}
               strokeLinecap="round"
-              markerEnd={isSelected ? 'url(#arrowhead-selected)' : 'url(#arrowhead)'}
+              markerStart={
+                heads === 'start' || heads === 'both'
+                  ? `url(#arrowhead-start${suffix})`
+                  : undefined
+              }
+              markerEnd={
+                heads === 'end' || heads === 'both'
+                  ? `url(#arrowhead${suffix})`
+                  : undefined
+              }
               className={`transition-colors ${isSelected ? 'filter drop-shadow(0 0 4px rgba(59,130,246,0.5))' : ''}`}
             />
           </g>

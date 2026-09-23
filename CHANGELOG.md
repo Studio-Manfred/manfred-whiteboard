@@ -15,6 +15,10 @@ All notable changes to this project are documented here. The format follows
 - Multiplayer cursors and an active-user presence list driven by Yjs awareness.
 - Floating tool toolbar and top navigation bar.
 - Keyboard operation of the canvas viewport: arrow keys pan, `+`/`-` zoom, `0` resets.
+- Floating properties bar beside the selection: fill, border colour, thickness, text size
+  and font for notes and shapes; colour, thickness and arrowheads (none / start / end /
+  both) for arrows; colour and thickness for ink. Applies across a multi-selection in one
+  undo step (STU-864).
 - Arrows are drawn by dragging from a connection dot: a preview follows the pointer,
   every element shows its dots while an arrow is in flight, and coming near one snaps
   the preview to it. Release on a snap to draw it, Escape to abandon. Dropping anywhere
@@ -43,6 +47,10 @@ All notable changes to this project are documented here. The format follows
   changelog.
 
 ### Changed
+
+- The toolbar's colour palette has moved to the properties bar, which edits what is
+  selected. With no palette to pre-set a colour, the last fill applied becomes the colour
+  of the next sticky note.
 
 - Drawing an arrow no longer means clicking one dot and then another, with no feedback
   in between; clicking an element's body no longer completes a half-drawn connector.

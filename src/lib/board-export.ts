@@ -9,6 +9,7 @@
 
 import { getAnchorPosition, calculateBezierPath } from './connector-math'
 import { pointsToSmoothPath } from './stroke-path'
+import { arrowheadsOf, fontFamilyStack } from './element-style'
 import type { Rect } from './marquee'
 import type {
   BoardElement,
@@ -105,8 +106,8 @@ function stickySvg(el: StickyElement): string {
     `<rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="8" ` +
     `fill="${el.color}" />` +
     (tspans
-      ? `<text font-family="Inter, system-ui, sans-serif" font-size="${fontSize}" ` +
-        `fill="#1e293b">${tspans}</text>`
+      ? `<text font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
+        `font-size="${fontSize}" fill="#1e293b">${tspans}</text>`
       : '')
   )
 }
@@ -127,6 +128,18 @@ function shapeSvg(el: ShapeElement): string {
   return (
     `<rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="8" ` +
     `fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`
+  )
+}
+
+/** A shape's centred label, if it has one. */
+function shapeLabelSvg(el: ShapeElement): string {
+  if (!el.text) return ''
+
+  const fontSize = el.fontSize || 14
+  return (
+    `<text x="${el.x + el.width / 2}" y="${el.y + el.height / 2 + fontSize / 3}" ` +
+    `text-anchor="middle" font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
+    `font-size="${fontSize}" fill="#1e293b">${escapeXml(el.text)}</text>`
   )
 }
 
@@ -152,10 +165,14 @@ function connectorSvg(
     el.toAnchor
   )
 
+  const heads = arrowheadsOf(el)
+  const markers =
+    (heads === 'start' || heads === 'both' ? ' marker-start="url(#arrowhead-start)"' : '') +
+    (heads === 'end' || heads === 'both' ? ' marker-end="url(#arrowhead)"' : '')
+
   return (
     `<path d="${pathData}" fill="none" stroke="${el.strokeColor || '#475569'}" ` +
-    `stroke-width="${el.strokeWidth || 2}" stroke-linecap="round" ` +
-    `marker-end="url(#arrowhead)" />`
+    `stroke-width="${el.strokeWidth || 2}" stroke-linecap="round"${markers} />`
   )
 }
 
@@ -164,7 +181,7 @@ function elementSvg(el: BoardElement, elements: ReadonlyMap<string, BoardElement
     case 'sticky':
       return stickySvg(el)
     case 'shape':
-      return shapeSvg(el)
+      return shapeSvg(el) + shapeLabelSvg(el)
     case 'drawing':
       return drawingSvg(el)
     case 'connector':
@@ -176,9 +193,14 @@ function elementSvg(el: BoardElement, elements: ReadonlyMap<string, BoardElement
 
 /** Only emitted when something actually points, to keep the file tidy. */
 const ARROWHEAD_DEFS =
-  '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" ' +
+  '<defs>' +
+  '<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" ' +
   'orient="auto" markerUnits="strokeWidth"><polygon points="0 0, 10 3.5, 0 7" ' +
-  'fill="#475569" /></marker></defs>'
+  'fill="#475569" /></marker>' +
+  '<marker id="arrowhead-start" markerWidth="10" markerHeight="7" refX="0" refY="3.5" ' +
+  'orient="auto" markerUnits="strokeWidth"><polygon points="10 0, 0 3.5, 10 7" ' +
+  'fill="#475569" /></marker>' +
+  '</defs>'
 
 /** Back-to-front, so the export stacks the way the board does. */
 function inZOrder(elements: ReadonlyMap<string, BoardElement>): BoardElement[] {
@@ -190,7 +212,7 @@ export function boardToSvg(elements: ReadonlyMap<string, BoardElement>): string 
   const bounds = boardBounds(elements)
   const drawn = inZOrder(elements).map((el) => elementSvg(el, elements)).filter(Boolean)
   const body = drawn.join('\n  ')
-  const needsArrowhead = drawn.some((markup) => markup.includes('marker-end'))
+  const needsArrowhead = drawn.some((markup) => markup.includes('marker-'))
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" ` +

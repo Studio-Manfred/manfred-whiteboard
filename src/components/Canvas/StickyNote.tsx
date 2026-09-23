@@ -3,6 +3,7 @@ import type { StickyElement, AnchorPosition } from '../../types/whiteboard'
 import { ResizeHandles } from './ResizeHandles'
 import type { ResizeHandle } from '../../lib/resize'
 import type { Point } from '../../lib/coordinates'
+import { fontFamilyStack } from '../../lib/element-style'
 
 interface StickyNoteProps {
   element: StickyElement
@@ -100,13 +101,19 @@ export function StickyNote({
           onChange={(e) => setText(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full h-full bg-transparent resize-none outline-none border-none text-slate-800 font-sans leading-snug cursor-text"
-          style={{ fontSize: `${element.fontSize || 16}px` }}
+          className="w-full h-full bg-transparent resize-none outline-none border-none text-slate-800 leading-snug cursor-text"
+          style={{
+            fontSize: `${element.fontSize || 16}px`,
+            fontFamily: fontFamilyStack(element.fontFamily),
+          }}
         />
       ) : (
         <div
-          className="w-full h-full whitespace-pre-wrap break-words text-slate-800 font-sans leading-snug overflow-hidden"
-          style={{ fontSize: `${element.fontSize || 16}px` }}
+          className="w-full h-full whitespace-pre-wrap break-words text-slate-800 leading-snug overflow-hidden"
+          style={{
+            fontSize: `${element.fontSize || 16}px`,
+            fontFamily: fontFamilyStack(element.fontFamily),
+          }}
         >
           {element.text || (
             <span className="text-slate-400 italic">Double-click to write...</span>

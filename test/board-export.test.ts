@@ -195,6 +195,44 @@ describe('boardToSvg', () => {
     expect(svg).not.toContain('<marker')
   })
 
+  it('exports the arrowheads an arrow actually has', () => {
+    const both = boardToSvg(
+      board(sticky('a', 0, 0), sticky('b', 400, 0), {
+        ...connector('c', 'a', 'b'),
+        startArrow: true,
+        endArrow: true,
+      })
+    )
+    expect(both).toContain('marker-start="url(#arrowhead-start)"')
+    expect(both).toContain('marker-end="url(#arrowhead)"')
+
+    const plain = boardToSvg(
+      board(sticky('a', 0, 0), sticky('b', 400, 0), {
+        ...connector('c', 'a', 'b'),
+        startArrow: false,
+        endArrow: false,
+      })
+    )
+    expect(plain).not.toContain('marker-start')
+    expect(plain).not.toContain('marker-end')
+  })
+
+  it('exports a note in its chosen font', () => {
+    const svg = boardToSvg(
+      board({ ...sticky('a', 0, 0, 'Styled'), fontSize: 24, fontFamily: 'mono' })
+    )
+
+    expect(svg).toContain('font-size="24"')
+    expect(svg).toMatch(/font-family="[^"]*monospace"/)
+  })
+
+  it("exports a shape's label", () => {
+    const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery' }))
+
+    expect(svg).toContain('Discovery')
+    expect(svg).toContain('text-anchor="middle"')
+  })
+
   it('skips a connector whose endpoints are gone', () => {
     const svg = boardToSvg(board(connector('c', 'missing', 'alsoMissing')))
 
