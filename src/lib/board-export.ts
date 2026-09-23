@@ -9,6 +9,7 @@
 
 import { getAnchorPosition, calculateBezierPath } from './connector-math'
 import { pointsToSmoothPath } from './stroke-path'
+import { isPenStroke, penOutlinePath } from './ink'
 import {
   arrowheadsOf,
   effectiveTextAlign,
@@ -171,6 +172,12 @@ function shapeLabelSvg(el: ShapeElement): string {
 }
 
 function drawingSvg(el: DrawingElement): string {
+  // Pen ink varies in width, so it exports as a filled outline — the same
+  // shape the canvas draws.
+  if (isPenStroke(el)) {
+    return `<path d="${penOutlinePath(el.points, el.strokeWidth)}" fill="${el.strokeColor}" />`
+  }
+
   return (
     `<path d="${pointsToSmoothPath(el.points)}" fill="none" stroke="${el.strokeColor}" ` +
     `stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" />`

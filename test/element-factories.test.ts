@@ -115,6 +115,26 @@ describe('createDrawingElement', () => {
 
     expect(drawing.points).toHaveLength(3)
   })
+
+  it('marks a new stroke as pen ink', () => {
+    expect(createDrawingElement(points, opts).ink).toBe('pen')
+  })
+
+  it('keeps stylus pressure where a device reported it, and nothing where it did not', () => {
+    const withPressure = createDrawingElement(
+      [
+        { x: 0, y: 0, p: 0.2 },
+        { x: 5, y: 5, p: 0.9 },
+        { x: 9, y: 2, p: 0.4 },
+      ],
+      opts
+    )
+    expect(withPressure.points.map((p) => p.p)).toEqual([0.2, 0.9, 0.4])
+
+    expect(createDrawingElement(points, opts).points.every((p) => p.p === undefined)).toBe(
+      true
+    )
+  })
 })
 
 describe('createConnectorElement', () => {

@@ -86,7 +86,7 @@ describe('DrawingLayer', () => {
   })
 
   it('previews the stroke being drawn right now', () => {
-    const { container } = renderLayer({
+    renderLayer({
       activePoints: [
         { x: 0, y: 0 },
         { x: 10, y: 10 },
@@ -94,16 +94,50 @@ describe('DrawingLayer', () => {
       activeColor: '#8b5cf6',
       activeWidth: 5,
     })
-    const preview = container.querySelectorAll('path')[0]
+    const preview = screen.getByTestId('active-stroke')
 
-    expect(preview.getAttribute('stroke')).toBe('#8b5cf6')
-    expect(preview.getAttribute('stroke-width')).toBe('5')
+    // Pen ink varies in width, so it is filled rather than stroked.
+    expect(preview.getAttribute('fill')).toBe('#8b5cf6')
+    expect(preview.getAttribute('stroke')).toBeNull()
     expect(Number(preview.getAttribute('opacity'))).toBeLessThan(1)
+  })
+
+  it('previews with the same engine that commits the stroke', () => {
+    renderLayer({
+      activePoints: [
+        { x: 0, y: 0 },
+        { x: 20, y: 5 },
+        { x: 40, y: 0 },
+      ],
+      activeWidth: 6,
+    })
+
+    // A closed outline, as a committed pen stroke is.
+    expect(screen.getByTestId('active-stroke').getAttribute('d')!.trimEnd()).toMatch(/Z$/)
   })
 
   it('waits for a second point before previewing — one point is not a stroke', () => {
     const { container } = renderLayer({ activePoints: [{ x: 0, y: 0 }] })
 
     expect(container.querySelectorAll('path')).toHaveLength(0)
+  })
+  it('draws pen ink as a filled outline and old strokes as stroked lines', () => {
+    renderLayer({ drawings: [{ ...stroke('pen1'), ink: 'pen' }, stroke('old1')] })
+
+    const pen = screen.getByTestId('drawing-pen1').querySelector('[data-ink="pen"]')!
+    expect(pen.getAttribute('fill')).toBe('#0f172a')
+    expect(pen.getAttribute('stroke')).toBeNull()
+
+    const old = screen.getByTestId('drawing-old1').querySelectorAll('path')[1]
+    expect(old.getAttribute('stroke')).toBe('#0f172a')
+    expect(old.getAttribute('fill')).toBe('none')
+  })
+
+  it('keeps a fat hit area for pen ink, whose tail is too thin to click', () => {
+    renderLayer({ drawings: [{ ...stroke('pen1'), ink: 'pen', strokeWidth: 1 }] })
+
+    const hitArea = screen.getByTestId('drawing-pen1').querySelectorAll('path')[0]
+    expect(Number(hitArea.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(12)
+    expect(hitArea.getAttribute('stroke')).toBe('transparent')
   })
 })

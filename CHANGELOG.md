@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Pen-like ink: freehand strokes thicken when drawn slowly and thin when drawn fast, via
+  `perfect-freehand`. A stylus's real pressure is used where reported, and simulated from
+  velocity otherwise. Strokes drawn before this keep their uniform width (STU-870).
+
 - Sticky notes with double-click inline editing, rectangle and circle shapes, and a
   selection overlay.
 - Dynamic Bézier connectors and a freehand pen, with stroke smoothing extracted to

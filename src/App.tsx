@@ -22,6 +22,7 @@ import {
 import { partitionElements, findElementAt } from './lib/board-selectors'
 import { elementsInMarquee, rectFromPoints } from './lib/marquee'
 import { boardBounds, boardToJson, boardToSvg } from './lib/board-export'
+import type { InkPoint } from './lib/ink'
 import { resizeRect, type ResizeHandle } from './lib/resize'
 import { findSnapTarget, type AnchorCandidate } from './lib/connector-drag'
 import { getAnchorPosition } from './lib/connector-math'
@@ -56,7 +57,7 @@ export default function App() {
   const [remoteUsers, setRemoteUsers] = useState<UserAwareness[]>([])
 
   // Drawing state
-  const [drawingPoints, setDrawingPoints] = useState<Array<{ x: number; y: number }>>([])
+  const [drawingPoints, setDrawingPoints] = useState<InkPoint[]>([])
   const isDrawing = useRef(false)
 
   /** An arrow being dragged out of an anchor. */
@@ -266,7 +267,11 @@ export default function App() {
 
       // Active drawing
       if (activeTool === 'pen' && isDrawing.current) {
-        setDrawingPoints((prev) => [...prev, { x: worldPoint.x, y: worldPoint.y }])
+        // A mouse reports a constant 0.5, which would draw a flat line, so only
+        // a real stylus contributes pressure; otherwise it is simulated from
+        // the speed of the stroke.
+        const pressure = e.pointerType === 'pen' ? { p: e.pressure } : {}
+        setDrawingPoints((prev) => [...prev, { x: worldPoint.x, y: worldPoint.y, ...pressure }])
         return
       }
 

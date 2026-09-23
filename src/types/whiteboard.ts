@@ -68,9 +68,15 @@ export interface ConnectorElement extends BaseElement {
 
 export interface DrawingElement extends BaseElement {
   type: 'drawing'
-  points: Array<{ x: number; y: number }>
+  /** `p` is stylus pressure, present only when the device reported one. */
+  points: Array<{ x: number; y: number; p?: number }>
   strokeColor: string
   strokeWidth: number
+  /**
+   * Which engine drew this stroke. Undefined means the original uniform-width
+   * line, so strokes made before the pen existed are left exactly as they were.
+   */
+  ink?: 'pen'
 }
 
 export type BoardElement =

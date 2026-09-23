@@ -24,6 +24,7 @@
     "@studio-manfred/manfred-design-system": "^0.22.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
+    "perfect-freehand": "^1.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.5.5",

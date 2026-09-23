@@ -175,6 +175,20 @@ describe('boardToSvg', () => {
     expect(svg).toContain('#ef4444')
   })
 
+  it('exports pen ink as a filled outline, as the canvas draws it', () => {
+    const svg = boardToSvg(board({ ...drawing('d'), ink: 'pen' }))
+
+    expect(svg).toContain('fill="#ef4444"')
+    expect(svg).not.toContain('stroke="#ef4444"')
+  })
+
+  it('exports an older uniform stroke unchanged', () => {
+    const svg = boardToSvg(board(drawing('d')))
+
+    expect(svg).toContain('stroke="#ef4444"')
+    expect(svg).toContain('stroke-width="3"')
+  })
+
   it('draws a connector between its endpoints', () => {
     const svg = boardToSvg(board(sticky('a', 0, 0), sticky('b', 400, 0), connector('c', 'a', 'b')))
 
