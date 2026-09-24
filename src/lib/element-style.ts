@@ -20,6 +20,7 @@ export type StyleProperty =
   | 'arrowheads'
   | 'stacking'
   | 'align'
+  | 'pattern'
 
 export type Arrowheads = 'none' | 'start' | 'end' | 'both'
 
@@ -63,6 +64,9 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
       // Arrows are derived from the elements they join, so they stay on their
       // own layer; everything else shares one stack.
       return element.type !== 'connector'
+    case 'pattern':
+      // Only ShapeElement carries `pattern`, and only ShapeItem draws one.
+      return element.type === 'shape'
     default:
       return false
   }

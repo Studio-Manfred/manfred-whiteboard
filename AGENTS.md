@@ -71,6 +71,9 @@ See `knowledge/roles.md` for the full role definitions.
 9. Squash-merge when green; the ticket auto-closes; pull `main`.
 
 ## Testing & TDD
+- **Spec locations:** unit and component tests live in the top-level `test/` directory
+  (45 files) and import from `src/lib/…`; `src/lib/utils.test.ts` is the lone exception.
+  E2E tests live in `e2e/`.
 - **The Iron Law:** no production logic without a failing test first.
 - **TDD trigger list:** pure functions/helpers, data transforms, reducers, hooks with
   logic, bug fixes (write the regression test first), API/util modules. Trivial wiring and

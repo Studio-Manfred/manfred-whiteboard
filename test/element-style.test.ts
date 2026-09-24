@@ -38,6 +38,11 @@ const ink = {
   points: [], strokeColor: '#ef4444', strokeWidth: 3, createdAt: 0, updatedAt: 0,
 } as BoardElement
 
+const frame = {
+  id: 'f', type: 'frame', x: 0, y: 0, width: 400, height: 300, zIndex: 1,
+  title: 'Frame', fillColor: '#ffffff', createdAt: 0, updatedAt: 0,
+} as BoardElement
+
 describe('supportsProperty', () => {
   it('offers fill to notes and shapes only', () => {
     expect(supportsProperty(note, 'fill')).toBe(true)
@@ -84,6 +89,16 @@ describe('supportsProperty', () => {
   it('offers arrowheads to arrows alone', () => {
     expect(supportsProperty(arrow, 'arrowheads')).toBe(true)
     expect(supportsProperty(ink, 'arrowheads')).toBe(false)
+  })
+
+  it('offers a fill pattern to shapes alone', () => {
+    // Only ShapeElement carries `pattern`, and only ShapeItem draws one; every
+    // other type would advertise a fill it can never paint.
+    expect(supportsProperty(shape, 'pattern')).toBe(true)
+    expect(supportsProperty(note, 'pattern')).toBe(false)
+    expect(supportsProperty(arrow, 'pattern')).toBe(false)
+    expect(supportsProperty(ink, 'pattern')).toBe(false)
+    expect(supportsProperty(frame, 'pattern')).toBe(false)
   })
 })
 

@@ -8,8 +8,9 @@ CRDTs. Local-first: every edit lands instantly and reconciles without conflicts.
 
 - **Infinite canvas** — pan and zoom from 10% to 500% over a dot grid, by pointer,
   spacebar-drag or keyboard.
-- **Board objects** — sticky notes with inline editing, rectangles and circles,
-  dynamic Bézier connectors that re-anchor as their endpoints move, and a freehand pen.
+- **Board objects** — sticky notes with inline editing, rectangles and circles with retro
+  1-bit fill patterns (hatch, crosshatch, dots, checker, scanline), dynamic Bézier
+  connectors that re-anchor as their endpoints move, and a freehand pen.
 - **Multiplayer** — live cursors, presence badges and conflict-free sync over Yjs and
   `y-websocket`.
 - **Offline resilience** — `y-indexeddb` keeps the board through a lost connection.

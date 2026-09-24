@@ -9,6 +9,7 @@ import {
   textPaddingFor,
 } from '../../lib/element-style'
 import { dropShadowFilter, elevationFor } from '../../lib/elevation'
+import { FILL_PATTERNS, patternFill, patternIdFor, patternTile } from '../../lib/fill-patterns'
 
 interface ShapeItemProps {
   element: ShapeElement
@@ -71,6 +72,18 @@ export function ShapeItem({
   // A shape is often transparent and may be a circle, so the shadow has to
   // follow its outline rather than a box around it.
   const elevation = dropShadowFilter(elevationFor({ isSelected, isDragging }))
+  // Unrecognised means a peer on a newer version synced a pattern id this
+  // build has never heard of — fall back to no def, same as a solid fill.
+  const pattern =
+    element.pattern && FILL_PATTERNS.includes(element.pattern) ? element.pattern : null
+  const tile = pattern ? patternTile(pattern) : null
+  // Dense ink — checker and crosshatch are around half — swallows a label
+  // sitting straight on it. Haloing in the shape's own fill colour keeps the
+  // text readable without a plate breaking the retro look. Stacked because one
+  // blurred shadow alone is too faint to carry the contrast.
+  const halo = tile
+    ? `0 0 3px ${element.fillColor}, 0 0 3px ${element.fillColor}, 0 0 3px ${element.fillColor}`
+    : undefined
 
   return (
     <div
@@ -99,13 +112,38 @@ export function ShapeItem({
         className="absolute inset-0 w-full h-full overflow-visible pointer-events-none transition-[filter]"
         style={{ filter: elevation }}
       >
+        {tile && (
+          <defs>
+            <pattern
+              id={patternIdFor(element.id)}
+              width={tile.size}
+              height={tile.size}
+              patternUnits="userSpaceOnUse"
+            >
+              <rect width={tile.size} height={tile.size} fill={element.fillColor || 'transparent'} />
+              {tile.marks.map((mark, i) =>
+                mark.kind === 'fill' ? (
+                  <path key={i} d={mark.d} fill={element.strokeColor || '#0f172a'} />
+                ) : (
+                  <path
+                    key={i}
+                    d={mark.d}
+                    fill="none"
+                    stroke={element.strokeColor || '#0f172a'}
+                    strokeWidth={tile.strokeWidth}
+                  />
+                )
+              )}
+            </pattern>
+          </defs>
+        )}
         {element.shapeType === 'circle' ? (
           <ellipse
             cx={element.width / 2}
             cy={element.height / 2}
             rx={element.width / 2}
             ry={element.height / 2}
-            fill={element.fillColor || 'transparent'}
+            fill={patternFill(element)}
             stroke={element.strokeColor || '#0f172a'}
             strokeWidth={element.strokeWidth || 2}
           />
@@ -116,7 +154,7 @@ export function ShapeItem({
             width={element.width}
             height={element.height}
             rx={8}
-            fill={element.fillColor || 'transparent'}
+            fill={patternFill(element)}
             stroke={element.strokeColor || '#0f172a'}
             strokeWidth={element.strokeWidth || 2}
           />
@@ -144,6 +182,7 @@ export function ShapeItem({
               fontSize: `${element.fontSize || 14}px`,
               fontFamily: fontFamilyStack(element.fontFamily),
               textAlign: effectiveTextAlign(element) ?? 'center',
+              textShadow: halo,
             }}
             className="w-full bg-transparent outline-none font-medium text-slate-800"
           />
@@ -153,6 +192,7 @@ export function ShapeItem({
               fontSize: `${element.fontSize || 14}px`,
               fontFamily: fontFamilyStack(element.fontFamily),
               textAlign: effectiveTextAlign(element) ?? 'center',
+              textShadow: halo,
             }}
             className="block w-full text-slate-800 font-medium break-words"
           >

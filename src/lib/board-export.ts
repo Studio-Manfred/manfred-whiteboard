@@ -10,6 +10,7 @@
 import { getAnchorPosition, calculateBezierPath } from './connector-math'
 import { pointsToSmoothPath } from './stroke-path'
 import { isPenStroke, penOutlinePath } from './ink'
+import { FILL_PATTERNS, patternFill, patternIdFor, patternTile } from './fill-patterns'
 import {
   arrowheadsOf,
   effectiveTextAlign,
@@ -137,7 +138,7 @@ function stickySvg(el: StickyElement): string {
 }
 
 function shapeSvg(el: ShapeElement): string {
-  const fill = el.fillColor || 'transparent'
+  const fill = patternFill(el)
   const stroke = el.strokeColor || '#0f172a'
   const strokeWidth = el.strokeWidth || 2
 
@@ -155,6 +156,38 @@ function shapeSvg(el: ShapeElement): string {
   )
 }
 
+/** The `<pattern>` def a patterned shape's fill points at — the tile's
+ * background in the shape's own fill colour, its ink in the shape's own
+ * stroke colour, so the feature adds no new colour field. Nothing is emitted
+ * for a shape with no pattern, or one this build does not recognise. */
+function patternDefSvg(el: ShapeElement): string {
+  if (!el.pattern || !FILL_PATTERNS.includes(el.pattern)) return ''
+
+  const tile = patternTile(el.pattern)
+  const background = el.fillColor || 'transparent'
+  const ink = el.strokeColor || '#0f172a'
+
+  const marks = tile.marks
+    .map((mark) =>
+      mark.kind === 'fill'
+        ? `<path d="${mark.d}" fill="${ink}" />`
+        : `<path d="${mark.d}" fill="none" stroke="${ink}" stroke-width="${tile.strokeWidth}" />`
+    )
+    .join('')
+
+  // The canvas gives every shape its own `<svg>`, so its tile starts at the
+  // shape's corner. Here every shape shares one board-wide viewBox, so the
+  // tile has to be offset to that same corner or the exported pattern sits at
+  // a different phase than the one on screen.
+  return (
+    `<pattern id="${patternIdFor(el.id)}" x="${el.x}" y="${el.y}" ` +
+    `width="${tile.size}" height="${tile.size}" ` +
+    `patternUnits="userSpaceOnUse">` +
+    `<rect width="${tile.size}" height="${tile.size}" fill="${background}" />${marks}` +
+    `</pattern>`
+  )
+}
+
 /** A shape's centred label, if it has one. */
 function shapeLabelSvg(el: ShapeElement): string {
   if (!el.text) return ''
@@ -163,9 +196,16 @@ function shapeLabelSvg(el: ShapeElement): string {
   const align = effectiveTextAlign(el) ?? 'center'
   const x = textXFor(align, el.x, el.width, textPaddingFor(el) ?? 0)
 
+  // Dense ink swallows a label sitting straight on it. SVG haloes with
+  // paint-order rather than the canvas's text-shadow, but to the same end and
+  // in the same colour — the shape's own fill.
+  const halo = patternFill(el).startsWith('url(')
+    ? `paint-order="stroke" stroke="${el.fillColor}" stroke-width="3" stroke-linejoin="round" `
+    : ''
+
   return (
     `<text x="${x}" y="${el.y + el.height / 2 + fontSize / 3}" ` +
-    `text-anchor="${textAnchorFor(align)}" ` +
+    `text-anchor="${textAnchorFor(align)}" ${halo}` +
     `font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
     `font-size="${fontSize}" fill="#1e293b">${escapeXml(el.text)}</text>`
   )
@@ -225,16 +265,15 @@ function elementSvg(el: BoardElement, elements: ReadonlyMap<string, BoardElement
   }
 }
 
-/** Only emitted when something actually points, to keep the file tidy. */
-const ARROWHEAD_DEFS =
-  '<defs>' +
+/** Only emitted when something actually points, to keep the file tidy. Shares
+ * one `<defs>` block with any pattern defs — see `boardToSvg`. */
+const ARROWHEAD_MARKERS =
   '<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" ' +
   'orient="auto" markerUnits="strokeWidth"><polygon points="0 0, 10 3.5, 0 7" ' +
   'fill="#475569" /></marker>' +
   '<marker id="arrowhead-start" markerWidth="10" markerHeight="7" refX="0" refY="3.5" ' +
   'orient="auto" markerUnits="strokeWidth"><polygon points="10 0, 0 3.5, 10 7" ' +
-  'fill="#475569" /></marker>' +
-  '</defs>'
+  'fill="#475569" /></marker>'
 
 /** Back-to-front, so the export stacks the way the board does. */
 function inZOrder(elements: ReadonlyMap<string, BoardElement>): BoardElement[] {
@@ -244,14 +283,25 @@ function inZOrder(elements: ReadonlyMap<string, BoardElement>): BoardElement[] {
 /** The whole board as a standalone SVG document. */
 export function boardToSvg(elements: ReadonlyMap<string, BoardElement>): string {
   const bounds = boardBounds(elements)
-  const drawn = inZOrder(elements).map((el) => elementSvg(el, elements)).filter(Boolean)
+  const ordered = inZOrder(elements)
+  const drawn = ordered.map((el) => elementSvg(el, elements)).filter(Boolean)
   const body = drawn.join('\n  ')
   const needsArrowhead = drawn.some((markup) => markup.includes('marker-'))
+
+  const patternDefs = ordered
+    .filter((el): el is ShapeElement => el.type === 'shape')
+    .map(patternDefSvg)
+    .join('')
+
+  // One `<defs>` block total: arrowhead markers and pattern defs share it
+  // rather than each emitting their own.
+  const defsInner = (needsArrowhead ? ARROWHEAD_MARKERS : '') + patternDefs
+  const defs = defsInner ? `  <defs>${defsInner}</defs>\n` : ''
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" ` +
     `viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}">\n` +
-    (needsArrowhead ? `  ${ARROWHEAD_DEFS}\n` : '') +
+    defs +
     `  <rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="#f8fafc" />\n` +
     (body ? `  ${body}\n` : '') +
     `</svg>\n`

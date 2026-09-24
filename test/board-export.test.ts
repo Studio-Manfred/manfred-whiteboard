@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { boardBounds, boardToSvg, boardToJson, EXPORT_PADDING } from '../src/lib/board-export'
+import { patternIdFor, type FillPattern } from '../src/lib/fill-patterns'
 import type {
   BoardElement,
   ConnectorElement,
@@ -41,6 +42,33 @@ function shape(id: string, shapeType: ShapeElement['shapeType'] = 'rectangle'): 
     createdAt: 0,
     updatedAt: 0,
   }
+}
+
+/**
+ * A shape carrying the one new field fill patterns add. The cast is what lets
+ * these tests describe the field before it exists on the type.
+ */
+function patternedShape(
+  id: string,
+  pattern: FillPattern,
+  overrides: Partial<ShapeElement> = {}
+): ShapeElement {
+  return { ...shape(id), ...overrides, pattern } as ShapeElement
+}
+
+/** The one `<pattern>` block bearing this id, so its insides can be read. */
+function patternDef(svg: string, id: string): string {
+  return svg.match(new RegExp(`<pattern[^>]*id="${id}"[\\s\\S]*?</pattern>`))?.[0] ?? ''
+}
+
+function countOf(svg: string, needle: string): number {
+  return svg.split(needle).length - 1
+}
+
+/** The drawing itself, with the definitions taken out — a tile reuses the
+ * shape's own colours, so the body is the only place to ask what it is filled with. */
+function withoutDefs(svg: string): string {
+  return svg.replace(/<defs>[\s\S]*?<\/defs>/g, '')
 }
 
 function drawing(id: string): DrawingElement {
@@ -291,6 +319,107 @@ describe('boardToSvg', () => {
 
     expect(svg.startsWith('<svg')).toBe(true)
     expect(svg.trimEnd().endsWith('</svg>')).toBe(true)
+  })
+})
+
+describe('boardToSvg, with fill patterns', () => {
+  it('defines nothing for a board with no patterns, as it always has', () => {
+    const svg = boardToSvg(board(shape('s')))
+
+    expect(svg).not.toContain('<defs')
+    expect(svg).not.toContain('<pattern')
+  })
+
+  it('defines one pattern for a patterned shape, named after the element', () => {
+    const svg = boardToSvg(board(patternedShape('s', 'hatch')))
+
+    expect(countOf(svg, '<pattern')).toBe(1)
+    expect(svg).toContain(`id="${patternIdFor('s')}"`)
+  })
+
+  it('haloes a label that sits on a pattern', () => {
+    // Same reason as the canvas: dark text on ~50% ink is unreadable. SVG
+    // gets there with paint-order rather than a text-shadow.
+    const svg = boardToSvg(board(patternedShape('s', 'checker', { text: 'Roadmap' })))
+
+    expect(svg).toContain('paint-order="stroke"')
+    expect(svg).toContain('stroke="#CCE2FF"')
+  })
+
+  it('leaves an unpatterned label unhaloed, as it always was', () => {
+    const svg = boardToSvg(board({ ...shape('s'), text: 'Roadmap' }))
+
+    expect(svg).not.toContain('paint-order')
+  })
+
+  it('anchors the tile to the shape, not to the board origin', () => {
+    // The canvas gives every shape its own <svg>, so a tile starts at that
+    // shape's corner. The export shares one board-wide viewBox, where a tile
+    // with no origin of its own would start at the board origin instead — the
+    // same pattern at a different phase than the one on screen.
+    const svg = boardToSvg(board(patternedShape('s', 'checker', { x: 37, y: 91 })))
+    const def = patternDef(svg, patternIdFor('s'))
+
+    expect(def).toContain('x="37"')
+    expect(def).toContain('y="91"')
+  })
+
+  it('points the shape at its own def, as a single fill', () => {
+    // One fill attribute, not a patterned overlay laid over a solid shape —
+    // an overlay would cover the inner half of the border stroke.
+    const body = withoutDefs(boardToSvg(board(patternedShape('s', 'dots'))))
+
+    expect(body).toContain(`fill="url(#${patternIdFor('s')})"`)
+    expect(body).not.toContain('fill="#CCE2FF"')
+    expect(countOf(body, 'fill=')).toBe(2) // the page background, and the shape
+  })
+
+  it('gives two shapes sharing a pattern a def each, so no id repeats', () => {
+    const svg = boardToSvg(board(patternedShape('a', 'checker'), patternedShape('b', 'checker')))
+
+    expect(countOf(svg, '<pattern')).toBe(2)
+    expect(svg).toContain(`id="${patternIdFor('a')}"`)
+    expect(svg).toContain(`id="${patternIdFor('b')}"`)
+  })
+
+  it('paints the tile background in the shape fill and the ink in its border colour', () => {
+    // No new colour field: the tile reuses the two the shape already carries.
+    const def = patternDef(boardToSvg(board(patternedShape('s', 'crosshatch'))), 'pattern-s')
+
+    expect(def).toContain('#CCE2FF')
+    expect(def).toContain('#0f172a')
+  })
+
+  it('keeps the border on the shape itself rather than on an overlay', () => {
+    // An overlay shape would be drawn over the inner half of the border stroke.
+    const svg = boardToSvg(board(patternedShape('s', 'scanline', { shapeType: 'circle' })))
+
+    expect(countOf(svg, '<ellipse')).toBe(1)
+    expect(svg).toContain('stroke="#0f172a"')
+  })
+
+  it('falls back to a solid fill for a pattern it does not know', () => {
+    const svg = boardToSvg(board(patternedShape('s', 'mosaic' as FillPattern)))
+
+    expect(svg).not.toContain('<pattern')
+    expect(svg).toContain('fill="#CCE2FF"')
+  })
+
+  it('puts the markers and the patterns in one defs block', () => {
+    const svg = boardToSvg(
+      board(sticky('a', 0, 0), sticky('b', 400, 0), connector('c', 'a', 'b'), patternedShape('s', 'hatch'))
+    )
+
+    expect(countOf(svg, '<defs')).toBe(1)
+    expect(svg).toContain('<marker')
+    expect(svg).toContain('<pattern')
+  })
+
+  it('copes with a patterned shape that has no fill colour', () => {
+    const svg = boardToSvg(board(patternedShape('s', 'dots', { fillColor: '' })))
+
+    expect(svg).toContain(`id="${patternIdFor('s')}"`)
+    expect(svg).not.toContain('fill=""')
   })
 })
 

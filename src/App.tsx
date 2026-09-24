@@ -42,6 +42,7 @@ import {
   supportsProperty,
   type Arrowheads,
 } from './lib/element-style'
+import type { FillPattern } from './lib/fill-patterns'
 import type { FontFamily, TextAlign } from './types/whiteboard'
 import type {
   BoardElement,
@@ -616,6 +617,14 @@ export default function App() {
     [patchSelection]
   )
 
+  const handlePatternChange = useCallback(
+    (pattern: FillPattern | undefined) =>
+      patchSelection((el) =>
+        supportsProperty(el, 'pattern') ? ({ pattern } as Partial<BoardElement>) : null
+      ),
+    [patchSelection]
+  )
+
   const handleStackChange = useCallback(
     (command: StackCommand) => {
       const conn = connectionRef.current
@@ -793,6 +802,7 @@ export default function App() {
           onArrowheadsChange={handleArrowheadsChange}
           onStackChange={handleStackChange}
           onTextAlignChange={handleTextAlignChange}
+          onPatternChange={handlePatternChange}
         />
       )}
       <ZoomControls viewport={viewport} onViewportChange={setViewport} />

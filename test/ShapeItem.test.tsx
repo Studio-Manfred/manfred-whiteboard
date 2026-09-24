@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ShapeItem } from '../src/components/Canvas/ShapeItem'
+import { patternIdFor, type FillPattern } from '../src/lib/fill-patterns'
 import type { ShapeElement } from '../src/types/whiteboard'
 
 const rectangle: ShapeElement = {
@@ -356,5 +357,107 @@ describe('ShapeItem', () => {
 
     expect(selected).toBeGreaterThan(resting)
     expect(dragging).toBeGreaterThan(selected)
+  })
+
+  describe('fill patterns', () => {
+    it('defines a pattern for the element and fills the shape with it', () => {
+      // 'hatch' draws stroke marks; 'checker' below draws fill marks — between
+      // the two, both branches of the mark-kind switch get exercised.
+      const { container } = render(
+        <ShapeItem
+          element={{ ...rectangle, pattern: 'hatch' }}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+        />
+      )
+
+      const id = patternIdFor(rectangle.id)
+      expect(container.querySelector(`pattern#${id}`)).toBeInTheDocument()
+      expect(container.querySelector('pattern path[stroke]')).toBeInTheDocument()
+      expect(container.querySelector('rect[fill^="url(#"]')).toHaveAttribute(
+        'fill',
+        `url(#${id})`
+      )
+    })
+
+    it('haloes the label so it stays readable on dense ink', () => {
+      // A checker or crosshatch shape is ~50% ink, and a label sitting
+      // straight on it disappears. The halo is the shape's own fill colour,
+      // so the text reads without a plate breaking the retro look.
+      render(
+        <ShapeItem
+          element={{ ...rectangle, pattern: 'checker', text: 'Roadmap' }}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+        />
+      )
+
+      expect(screen.getByText('Roadmap').style.textShadow).toContain(rectangle.fillColor)
+    })
+
+    it('leaves an unpatterned label with no halo, as it always had', () => {
+      render(
+        <ShapeItem
+          element={{ ...rectangle, text: 'Roadmap' }}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+        />
+      )
+
+      expect(screen.getByText('Roadmap').style.textShadow).toBe('')
+    })
+
+    it('draws the pattern on a circle the same way as a rectangle', () => {
+      const { container } = render(
+        <ShapeItem
+          element={{ ...rectangle, shapeType: 'circle', pattern: 'checker' }}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+        />
+      )
+
+      expect(container.querySelector(`pattern#${patternIdFor(rectangle.id)}`)).toBeInTheDocument()
+      expect(container.querySelector('ellipse')).toHaveAttribute(
+        'fill',
+        `url(#${patternIdFor(rectangle.id)})`
+      )
+    })
+
+    it('falls back to a solid fill for a pattern it does not know, without throwing', () => {
+      const { container } = render(
+        <ShapeItem
+          element={{ ...rectangle, fillColor: '#CCE2FF', pattern: 'mosaic' as FillPattern }}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+        />
+      )
+
+      expect(container.querySelector('pattern')).not.toBeInTheDocument()
+      expect(container.querySelector('rect[width]')).toHaveAttribute('fill', '#CCE2FF')
+    })
+
+    it('leaves an unpatterned shape with no def at all', () => {
+      const { container } = render(
+        <ShapeItem
+          element={rectangle}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onUpdate={vi.fn()}
+          onDragStart={vi.fn()}
+        />
+      )
+
+      expect(container.querySelector('defs')).not.toBeInTheDocument()
+    })
   })
 })
