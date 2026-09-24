@@ -25,6 +25,36 @@ flat config with `jsx-a11y`. Hosted on Vercel.
 | `npm run test:e2e` | Playwright (builds + previews first) |
 | `AXE_ENFORCE=1 npm run test:e2e` | make the axe sweep merge-blocking |
 
+## Roles
+
+You act in one of eight roles, each backed by a specific Claude model.
+
+### Router
+
+| Task | Role | Model |
+|---|---|---|
+| Framing outcomes | strategist | Fable |
+| Turning strategy into a spec | analyst | Fable |
+| UX / IA / tone of voice | designer | Fable |
+| Technical design, plan | architect | Opus |
+| Implementing a plan task | builder | Sonnet |
+| Failing tests, verification, behavioural review | tester | Opus |
+| CHANGELOG / MEMORY / knowledge / release notes | documenter | Haiku |
+| Merge, deploy, smoke, rollback | release-manager | Sonnet |
+
+### Wear the hat, or dispatch?
+
+**Dispatch a subagent** when the task holds a plan-task's worth of context,
+when the role's model differs from your session's, or when you want
+parallelism.
+
+**Wear the hat yourself** for single-edit doc passes, two-line fixes, or any
+interactive skill that dialogues with the human (`/brainstorming`,
+`/writing-plans`). Spawning a subagent for a two-line CHANGELOG edit costs
+more than doing it.
+
+See `knowledge/roles.md` for the full role definitions.
+
 ## The per-PR rhythm
 1. A Linear ticket exists first (`STU-NNN`, Studio Manfred team, **Manfred Whiteboard**
    project) — file one if needed. The ticket exists before the branch.

@@ -11,6 +11,20 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-24 — STU-924 · role-based agents installed · shipped
+
+- **Shipped:** eight named roles installed at `.claude/agents/*.md` (strategist,
+  analyst, designer, architect, builder, tester, documenter, release-manager),
+  each bound to a specific Claude model via frontmatter (Fable / Opus /
+  Sonnet / Haiku). Human-readable convention at `knowledge/roles.md`;
+  router table + hat/dispatch paragraph added to `AGENTS.md` above the per-PR
+  rhythm. Ships from `manfred-bootstrap` STU-917.
+- **Decisions:** `tools:` frontmatter intentionally omitted (open access; lock
+  down later per bootstrap STU-920).
+- **Next pickup:** first time you dispatch a role subagent, eyeball that the
+  bound model actually answers (Fable in particular — see bootstrap STU-921
+  for the durability check).
+
 ## 2026-09-21 — canvas batch landed · a11y + multiplayer fixed · in progress
 
 - **Shipped:** the uncommitted canvas batch (plan tasks 6-10) split into seven commits:
