@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
 import { PropertiesBar } from '../src/components/UI/PropertiesBar'
+import { FILL_SWATCHES } from '../src/lib/element-colors'
+import { FILL_PATTERNS, patternLabel, patternTile } from '../src/lib/fill-patterns'
 import type { BoardElement, ConnectorElement, ShapeElement, StickyElement } from '../src/types/whiteboard'
 
 const note: StickyElement = {
@@ -35,6 +37,7 @@ function renderBar(selection: BoardElement[]) {
     onArrowheadsChange: vi.fn(),
     onStackChange: vi.fn(),
     onTextAlignChange: vi.fn(),
+    onPatternChange: vi.fn(),
   }
   render(
     <PropertiesBar
@@ -73,6 +76,7 @@ describe('PropertiesBar', () => {
         onArrowheadsChange={vi.fn()}
         onStackChange={vi.fn()}
         onTextAlignChange={vi.fn()}
+        onPatternChange={vi.fn()}
       />
     )
 
@@ -301,5 +305,251 @@ describe('PropertiesBar', () => {
       'aria-pressed',
       'false'
     )
+  })
+
+  describe('fill patterns', () => {
+    /**
+     * The chip that clears the pattern, named the way the fill palette names
+     * its empty swatch ("No fill") rather than with a bare "None".
+     */
+    const NO_PATTERN = 'No pattern'
+
+    /** Every chip's accessible name, in the order the row must show them. */
+    const CHIP_NAMES = [NO_PATTERN, ...FILL_PATTERNS.map(patternLabel)]
+
+    /** The patterns live in a second row of the fill panel, not on the bar. */
+    const openFillPanel = () => {
+      fireEvent.click(control('Fill colour')!)
+      return screen.getByRole('dialog', { name: 'Fill colour' })
+    }
+
+    it('costs the bar no button of its own, so it still fits a phone', () => {
+      renderBar([shape])
+
+      // Fill, border, thickness, text size, font, stack order, alignment.
+      expect(screen.getAllByRole('button')).toHaveLength(7)
+      expect(control('Fill pattern')).not.toBeInTheDocument()
+      expect(control('Pattern')).not.toBeInTheDocument()
+    })
+
+    it('offers the chips in the fill panel when a shape is selected', () => {
+      renderBar([shape])
+      const panel = openFillPanel()
+
+      for (const name of CHIP_NAMES) {
+        expect(within(panel).getByRole('button', { name })).toBeInTheDocument()
+      }
+    })
+
+    it('offers a note its colours and nothing else — a note has no pattern', () => {
+      renderBar([note])
+      const panel = openFillPanel()
+
+      for (const name of CHIP_NAMES) {
+        expect(within(panel).queryByRole('button', { name })).not.toBeInTheDocument()
+      }
+      // The swatches are untouched.
+      expect(within(panel).getByRole('button', { name: 'Lavender' })).toBeInTheDocument()
+    })
+
+    it('shows six chips — none first, then the five in picker order', () => {
+      renderBar([shape])
+      const panel = openFillPanel()
+
+      expect(CHIP_NAMES).toHaveLength(6)
+
+      const buttons = within(panel).getAllByRole('button')
+      const positions = CHIP_NAMES.map((name) =>
+        buttons.indexOf(within(panel).getByRole('button', { name }))
+      )
+
+      expect(positions).toEqual([...positions].sort((a, b) => a - b))
+      // The swatches plus these six, and no stray seventh chip.
+      expect(buttons).toHaveLength(FILL_SWATCHES.length + CHIP_NAMES.length)
+    })
+
+    it('draws each chip from the tile the canvas draws', () => {
+      // A chip built from its own geometry could advertise a fill the shape
+      // will never paint — the bug this bar has already had with colour.
+      renderBar([shape])
+      openFillPanel()
+
+      for (const pattern of FILL_PATTERNS) {
+        const chip = screen.getByRole('button', { name: patternLabel(pattern) })
+        const drawn = Array.from(chip.querySelectorAll('path')).map((p) => p.getAttribute('d'))
+
+        for (const mark of patternTile(pattern).marks) {
+          expect(drawn).toContain(mark.d)
+        }
+      }
+    })
+
+    it('tiles each chip, so it reads as the texture and not one stray mark', () => {
+      // Drawing a tile's marks once shows a single dot for Ben-Day dots and two
+      // offset squares for a checkerboard — correct geometry that tells the
+      // human nothing. The chip has to repeat the tile the way the shape does.
+      renderBar([shape])
+      openFillPanel()
+
+      for (const pattern of FILL_PATTERNS) {
+        const chip = screen.getByRole('button', { name: patternLabel(pattern) })
+
+        expect(chip.querySelector('pattern')).not.toBeNull()
+        expect(chip.querySelector('rect[fill^="url(#"]')).not.toBeNull()
+      }
+    })
+
+    it('applies the pattern that was chosen', () => {
+      const handlers = renderBar([shape])
+
+      openFillPanel()
+      fireEvent.click(screen.getByRole('button', { name: patternLabel('dots') }))
+
+      expect(handlers.onPatternChange).toHaveBeenCalledWith('dots')
+    })
+
+    it('clears the pattern back to a solid fill', () => {
+      const handlers = renderBar([{ ...shape, pattern: 'hatch' }])
+
+      openFillPanel()
+      fireEvent.click(screen.getByRole('button', { name: NO_PATTERN }))
+
+      expect(handlers.onPatternChange).toHaveBeenCalledWith(undefined)
+    })
+
+    it('leaves the fill colour alone when only the pattern changed', () => {
+      // Both rows share one panel; a chip must not repaint the shape as well.
+      const handlers = renderBar([shape])
+
+      openFillPanel()
+      fireEvent.click(screen.getByRole('button', { name: patternLabel('crosshatch') }))
+
+      expect(handlers.onFillChange).not.toHaveBeenCalled()
+    })
+
+    it('leaves the pattern alone when only the colour changed', () => {
+      const handlers = renderBar([shape])
+
+      openFillPanel()
+      fireEvent.click(screen.getByRole('button', { name: 'Lavender' }))
+
+      expect(handlers.onFillChange).toHaveBeenCalledWith('#E8D7FF')
+      expect(handlers.onPatternChange).not.toHaveBeenCalled()
+    })
+
+    it('closes the panel and hands focus back when a chip is chosen', () => {
+      renderBar([shape])
+      const trigger = control('Fill colour')!
+
+      openFillPanel()
+      fireEvent.click(screen.getByRole('button', { name: patternLabel('scanline') }))
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(trigger).toHaveFocus()
+    })
+
+    it('marks the pattern the shape already has', () => {
+      renderBar([{ ...shape, pattern: 'checker' }])
+      openFillPanel()
+
+      expect(screen.getByRole('button', { name: patternLabel('checker') })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+      expect(screen.getByRole('button', { name: NO_PATTERN })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      )
+    })
+
+    it('marks none for a shape drawn before patterns existed', () => {
+      renderBar([shape])
+      openFillPanel()
+
+      expect(screen.getByRole('button', { name: NO_PATTERN })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+      expect(screen.getByRole('button', { name: patternLabel('hatch') })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      )
+    })
+
+    it('marks nothing when two shapes carry different patterns', () => {
+      renderBar([
+        { ...shape, pattern: 'hatch' },
+        { ...shape, id: 's2', pattern: 'dots' },
+      ])
+      openFillPanel()
+
+      for (const name of [NO_PATTERN, patternLabel('hatch'), patternLabel('dots')]) {
+        expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false')
+      }
+    })
+
+    it('marks nothing when one shape is patterned and the other is plain', () => {
+      // sharedValue drops undefined, so a plain shape falls out of the
+      // comparison and the bar would otherwise claim a pattern only one of
+      // them has.
+      renderBar([{ ...shape, pattern: 'hatch' }, { ...shape, id: 's2' }])
+      openFillPanel()
+
+      expect(screen.getByRole('button', { name: patternLabel('hatch') })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      )
+      expect(screen.getByRole('button', { name: NO_PATTERN })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      )
+    })
+
+    it('gives a mixed note-and-shape selection the chips, as the bar does elsewhere', () => {
+      renderBar([note, shape])
+      const panel = openFillPanel()
+
+      expect(within(panel).getByRole('button', { name: patternLabel('hatch') })).toBeInTheDocument()
+    })
+
+    it('makes every chip a real button, reachable and operable from the keyboard', () => {
+      // jsdom does not turn Enter on a button into a click, so the contract is
+      // asserted on the element itself: a native button, in the tab order.
+      renderBar([shape])
+      const panel = openFillPanel()
+
+      for (const name of CHIP_NAMES) {
+        const chip = within(panel).getByRole('button', { name })
+
+        expect(chip.tagName).toBe('BUTTON')
+        expect(chip).toHaveAttribute('type', 'button')
+        expect(chip).not.toHaveAttribute('tabindex', '-1')
+      }
+    })
+
+    it('keeps the bar a single tab stop while the chips are open', () => {
+      renderBar([shape])
+      const bar = screen.getByRole('toolbar', { name: 'Selection properties' })
+      openFillPanel()
+
+      const tabbable = within(bar)
+        .getAllByRole('button')
+        .filter((b) => b.getAttribute('tabindex') === '0')
+
+      expect(tabbable).toHaveLength(1)
+    })
+
+    it('closes the chips on Escape and restores focus, like every other panel', () => {
+      renderBar([shape])
+      const trigger = control('Fill colour')!
+
+      openFillPanel()
+      expect(screen.getByRole('button', { name: NO_PATTERN })).toBeInTheDocument()
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(trigger).toHaveFocus()
+    })
   })
 })

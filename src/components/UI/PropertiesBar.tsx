@@ -23,6 +23,14 @@ import {
   type Arrowheads,
   type StyleProperty,
 } from '../../lib/element-style'
+import {
+  FILL_PATTERNS,
+  NO_PATTERN,
+  currentPatternOf,
+  patternLabel,
+  patternTile,
+  type FillPattern,
+} from '../../lib/fill-patterns'
 import { contextBarPosition } from '../../lib/context-bar'
 import { useWindowSize } from '../../hooks/useWindowSize'
 import type { Rect } from '../../lib/marquee'
@@ -32,6 +40,7 @@ import type {
   BoardElement,
   ConnectorElement,
   FontFamily,
+  ShapeElement,
   TextAlign,
 } from '../../types/whiteboard'
 
@@ -71,6 +80,7 @@ export interface PropertiesBarProps {
   onArrowheadsChange: (choice: Arrowheads) => void
   onStackChange: (command: StackCommand) => void
   onTextAlignChange: (align: TextAlign) => void
+  onPatternChange: (pattern: FillPattern | undefined) => void
 }
 
 function Swatch({
@@ -136,6 +146,70 @@ function OptionList({
 }
 
 /**
+ * A fill-pattern option in the picker: a small SVG preview built from the
+ * same tile the canvas and the export draw, so a chip can never advertise a
+ * pattern the shape won't actually paint.
+ */
+function PatternChip({
+  pattern,
+  isCurrent,
+  onSelect,
+}: {
+  pattern: FillPattern | typeof NO_PATTERN
+  isCurrent: boolean
+  onSelect: () => void
+}) {
+  const label = pattern === NO_PATTERN ? 'No pattern' : patternLabel(pattern)
+  const tile = pattern === NO_PATTERN ? null : patternTile(pattern)
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={isCurrent}
+      onClick={onSelect}
+      className={`relative flex items-center justify-center w-7 h-7 rounded-lg border bg-white transition-transform hover:scale-110 ${
+        isCurrent ? 'border-blue-500 ring-2 ring-blue-500/40' : 'border-slate-300'
+      }`}
+    >
+      {tile ? (
+        // Tiled, not drawn once: a single tile of `checker` is two offset
+        // squares and a single tile of `dots` is one dot — true geometry that
+        // reads as nothing. One scale for all five keeps their relative
+        // densities honest, so a chip looks like the shape will.
+        <svg aria-hidden="true" width={20} height={20} viewBox="0 0 20 20">
+          <defs>
+            <pattern
+              id={`chip-${pattern}`}
+              width={tile.size}
+              height={tile.size}
+              patternUnits="userSpaceOnUse"
+              patternTransform="scale(0.5)"
+            >
+              {tile.marks.map((mark, index) => (
+                <path
+                  key={index}
+                  d={mark.d}
+                  fill={mark.kind === 'fill' ? '#0f172a' : 'none'}
+                  stroke={mark.kind === 'stroke' ? '#0f172a' : 'none'}
+                  strokeWidth={tile.strokeWidth}
+                />
+              ))}
+            </pattern>
+          </defs>
+          <rect width={20} height={20} fill={`url(#chip-${pattern})`} />
+        </svg>
+      ) : (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 m-auto h-px w-5 rotate-45 bg-red-400"
+        />
+      )}
+    </button>
+  )
+}
+
+/**
  * Properties for whatever is selected, floating beside it. Only the controls
  * that apply to the selection are shown, so the bar stays small.
  */
@@ -151,6 +225,7 @@ export function PropertiesBar({
   onArrowheadsChange,
   onStackChange,
   onTextAlignChange,
+  onPatternChange,
 }: PropertiesBarProps) {
   // The bar's width depends on how many controls the selection needs, so it
   // has to measure itself to sit centred over that selection.
@@ -215,6 +290,19 @@ export function PropertiesBar({
     arrows.every((a) => arrowheadsOf(a) === arrowheadsOf(arrows[0]))
       ? arrowheadsOf(arrows[0])
       : null
+  // Not `sharedValue`: it filters out `undefined`, which would drop a plain
+  // shape out of the comparison rather than count it as disagreement (see
+  // `currentPatternOf`).
+  const patternTargets = selection.filter(
+    (el): el is ShapeElement => supportsProperty(el, 'pattern')
+  )
+  const currentPattern =
+    patternTargets.length > 0 &&
+    patternTargets.every(
+      (el) => currentPatternOf(el) === currentPatternOf(patternTargets[0])
+    )
+      ? currentPatternOf(patternTargets[0])
+      : null
 
   useLayoutEffect(() => {
     const el = barRef.current
@@ -270,18 +358,46 @@ export function PropertiesBar({
           {...nextItem()}
           panelPlacement={panelPlacement}
           renderPanel={(close) => (
-            <div className="flex items-center gap-1.5">
-              {FILL_SWATCHES.map((color) => (
-                <Swatch
-                  key={color}
-                  color={color}
-                  isCurrent={color === currentFill}
-                  onSelect={() => {
-                    onFillChange(color)
-                    close()
-                  }}
-                />
-              ))}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-1.5">
+                {FILL_SWATCHES.map((color) => (
+                  <Swatch
+                    key={color}
+                    color={color}
+                    isCurrent={color === currentFill}
+                    onSelect={() => {
+                      onFillChange(color)
+                      close()
+                    }}
+                  />
+                ))}
+              </div>
+              {/* A shape's fill can also carry a retro mono pattern. Notes
+                  have no such thing, so the row only shows up when a shape is
+                  part of the selection. */}
+              {has('pattern') && (
+                <div className="flex items-center gap-1.5">
+                  <PatternChip
+                    pattern={NO_PATTERN}
+                    isCurrent={currentPattern === NO_PATTERN}
+                    onSelect={() => {
+                      onPatternChange(undefined)
+                      close()
+                    }}
+                  />
+                  {FILL_PATTERNS.map((pattern) => (
+                    <PatternChip
+                      key={pattern}
+                      pattern={pattern}
+                      isCurrent={pattern === currentPattern}
+                      onSelect={() => {
+                        onPatternChange(pattern)
+                        close()
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         >

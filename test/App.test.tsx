@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import * as Y from 'yjs'
 import { createWhiteboardDoc } from '../src/types/whiteboard'
+import { patternIdFor, patternLabel } from '../src/lib/fill-patterns'
 
 /**
  * Drives the real App against an in-memory Yjs document. Only the transport is
@@ -380,6 +381,51 @@ describe('App', () => {
       'fill',
       '#CCE2FF'
     )
+  })
+
+  it('applies a fill pattern to a selected shape, from the fill panel', () => {
+    // Wires PropertiesBar's onPatternChange the same way onFillChange etc.
+    // are wired above — not covered by PropertiesBar's own tests, which stub
+    // every handler out.
+    render(<App />)
+
+    pickTool('Rectangle')
+    clickCanvasAt(500, 300)
+    const shape = document.querySelector('[data-testid^="shape-"]') as HTMLElement
+    fireEvent.pointerDown(shape, { clientX: 500, clientY: 300 })
+    const shapeId = shape.getAttribute('data-testid')!.replace('shape-', '')
+
+    openBarControl('Fill colour')
+    fireEvent.click(screen.getByRole('button', { name: patternLabel('crosshatch') }))
+
+    // A pattern also renders a `<rect>` of its own inside `<defs><pattern>` for
+    // the tile background, ahead of the shape's own `<rect>` in document order
+    // — `svg > rect` picks the shape's, not the tile's.
+    expect(document.querySelector('[data-testid^="shape-"] svg > rect')).toHaveAttribute(
+      'fill',
+      `url(#${patternIdFor(shapeId)})`
+    )
+  })
+
+  it('clears a shape back to a solid fill from the "No pattern" chip', () => {
+    render(<App />)
+
+    pickTool('Rectangle')
+    clickCanvasAt(500, 300)
+    const shape = document.querySelector('[data-testid^="shape-"]') as HTMLElement
+    fireEvent.pointerDown(shape, { clientX: 500, clientY: 300 })
+    const shapeRect = () => document.querySelector('[data-testid^="shape-"] svg > rect')!
+
+    openBarControl('Fill colour')
+    fireEvent.click(screen.getByRole('button', { name: patternLabel('crosshatch') }))
+    expect(shapeRect()).toHaveAttribute('fill', expect.stringMatching(/^url\(#pattern-/))
+
+    openBarControl('Fill colour')
+    fireEvent.click(screen.getByRole('button', { name: 'No pattern' }))
+
+    // A freshly drawn rectangle's fill defaults to transparent; clearing the
+    // pattern falls back to whatever plain fill the shape already had.
+    expect(shapeRect()).toHaveAttribute('fill', 'transparent')
   })
 
   it('recolours in a single transaction, so it is one undo step', () => {
