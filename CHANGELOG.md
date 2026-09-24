@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Fill patterns for shapes — five retro 1-bit mono patterns (`hatch`, `crosshatch`, `dots`,
+  `checker`, `scanline`) drawn in the shape's border colour over its fill colour. Geometry
+  tested in `src/lib/fill-patterns.ts` and feeds both canvas and export renderers. Picker
+  chips are tiled SVG previews; shape labels get a halo in the shape's fill to sit legibly
+  over dense ink (STU-925).
+
 - Freehand strokes are full objects: they resize by their handles (scaling the ink, not
   just its bounding box) and take part in stack order alongside notes and shapes. Colour
   and thickness already worked (STU-871).

@@ -20,6 +20,45 @@ Format:
 
 ---
 
+## 2026-09-24 — pattern phase differed between canvas and export
+
+- **Symptom:** a checkerboard fill appeared in one phase on screen and a different phase
+  in the exported PNG — the same pattern at a different offset, up to ~8px.
+- **Cause:** the canvas gives each shape its own `<svg>`, so `patternUnits="userSpaceOnUse"`
+  tiled from the shape's local corner. The export shares one board-wide `viewBox`, so with
+  no `x`/`y` on the `<pattern>` def it tiled from the board origin instead — the same
+  coordinate system mismatch appears as a phase shift. The geometry source (`fill-patterns.ts`)
+  was correct; the coordinate SPACE each renderer worked in was the surprise.
+- **Fix / conclusion:** set `x`/`y` on the exported `<pattern>` to the element's position
+  in board space. Lesson: when one geometry source feeds two renderers, the coordinate
+  space each one works in is part of the contract, not an implementation detail. Spell it
+  out in comments at the call sites.
+- **Graduated to:** candidate for `my-process/docs/knowledge/` — will recur in any project
+  that renders the same geometry to canvas and SVG.
+
+---
+
+## 2026-09-24 — structural tests passed while the feature was unusable
+
+- **Symptom:** two rendering defects shipped green: (1) labels were swallowed by ~50%
+  ink on checker and crosshatch patterns, making them unreadable; (2) the pattern picker
+  chips drew a single tile (one dot for Ben-Day, two offset squares for a checkerboard),
+  so you could not tell what you were choosing. All component tests passed.
+- **Cause:** assertions only checked what was explicitly tested — containment, path
+  distinctness, presence of absolute commands — and all of those were true in the broken
+  state. A test can only verify what you thought to assert. Visual properties (readability,
+  recognisability) lie outside structural assertions and require looking at the render.
+- **Fix / conclusion:** screenshot the real render (Playwright driving the preview build)
+  and eyeball it against the spec. For anything visual or spatial, a structural assertion
+  is not enough. Lesson: jsdom tests cannot catch layout bugs, alignment issues, or anything
+  that depends on how the render actually looks — that is the job of a real browser test,
+  even a throwaway one that just captures a screenshot for human review.
+- **Graduated to:** candidate for `my-process/docs/knowledge/` alongside the PointerEvent
+  and Tailwind entries — together: "jsdom does not do rendering; test anything that needs
+  to be seen in a real browser."
+
+---
+
 ## Seeded stack gotchas (ship with the starter — not incidents in this repo)
 
 These were hit downstream (manfred-workshops, 2026-07-13) and will recur in any project

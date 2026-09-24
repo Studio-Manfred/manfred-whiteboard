@@ -11,6 +11,25 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-24 — STU-925 · fill patterns for shapes · shipped
+
+- **Shipped:** five 1-bit mono fill patterns for shapes (hatch, crosshatch, dots/Ben-Day,
+  checker, scanline), drawn in the shape's border colour. No new colour field; pattern is
+  optional (`pattern?: FillPattern`), so undefined boards render unchanged. Geometry lives
+  in one tested module (`src/lib/fill-patterns.ts`) feeding both canvas (`ShapeItem.tsx`)
+  and SVG/PNG export (`board-export.ts`). Pattern def ids are `pattern-<elementId>`, unique
+  by construction. Picker is a second row in the Fill popover (shape-only), gated to fit
+  within the bar at 393px. Labels on dense ink get a text halo in the shape's fill colour.
+- **Decisions:**
+  - Pattern defs unique by element ID, avoiding axe's `duplicate-id` violations.
+  - Coordinate space as part of the geometry contract: canvas uses `patternUnits="userSpaceOnUse"`
+    with no `x`/`y` (shape-local origin), export sets `x`/`y` to element position
+    (board-space origin) to keep phase alignment.
+- **Next pickup:** STU-926 (specs outside the typecheck project) and STU-927
+  (properties-bar panels open off left edge), both filed and unstarted.
+
+---
+
 ## 2026-09-24 — STU-924 · role-based agents installed · shipped
 
 - **Shipped:** eight named roles installed at `.claude/agents/*.md` (strategist,
