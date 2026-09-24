@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import type { FillPattern } from '../lib/fill-patterns'
 
 export type ElementType = 'sticky' | 'shape' | 'frame' | 'connector' | 'drawing'
 export type AnchorPosition = 'top' | 'right' | 'bottom' | 'left'
@@ -41,6 +42,9 @@ export interface ShapeElement extends BaseElement {
   fontSize?: number
   fontFamily?: FontFamily
   textAlign?: TextAlign
+  /** Undefined means a solid fill, so every shape drawn before patterns
+   * existed renders byte for byte as it did. */
+  pattern?: FillPattern
 }
 
 export interface FrameElement extends BaseElement {
