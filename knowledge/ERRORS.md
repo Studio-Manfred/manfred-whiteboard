@@ -204,3 +204,96 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
   element, check what else already lives at those coordinates.
 - **Graduated to:** not yet.
 
+---
+
+## 2026-09-25 — a test can pass while measuring the wrong thing
+
+- **Symptom:** three separate tests on STU-953 passed while proving nothing. One asserted
+  a height guard passed with the guard deleted (it re-rendered the same object, so React
+  never re-ran the effect). One asserted peer-staleness correction passed against code
+  that ignored peer updates. One asserted the export wraps like the canvas against two
+  algorithms that diverged only on a fraction of inputs but shared a glyph-ratio constant,
+  making the test self-fulfilling.
+- **Cause:** the test can only verify what you thought to assert. When the assertion is
+  "two values are equal" and they compute through the same maths whether or not the
+  feature works, the test cannot fail. A structural test asserting "the export contains an
+  SVG tspan" proves nothing if the export is using completely different wrapping logic
+  underneath and the fixture just happens to wrap the same way.
+- **Fix / conclusion:** ask what a test would do if the bug were present, and **prove it
+  by making the bug** — delete the guard, change the logic, swap the algorithm for an old
+  one. If the test stays green, it cannot see the bug. Use mutation testing to find
+  self-fulfilling tests before they ship. The practice is expensive (review dispatch +
+  mutation + re-review) but these three found issues ranging from a dead guard to an
+  unrenderable feature dropped from the pipeline.
+- **Graduated to:** candidate for `my-process/docs/knowledge/` alongside the jsdom and
+  PointerEvent entries — together: "test observability: prove a test fails when the bug
+  is present, not merely when it is not."
+
+---
+
+## 2026-09-25 — focusing an input from the same pointerdown that created it loses a race
+
+- **Symptom:** clicking the canvas to create a text object entered edit mode, but the
+  created textarea lost focus immediately before the user could type. Inspecting it
+  afterwards showed the object had been deleted.
+- **Cause:** the canvas region is `tabIndex=0` for WCAG 2.1.1 keyboard panning (arrow
+  keys). This makes it programmatically focusable. When a pointerdown bubbles to the
+  canvas, the browser's native default action runs *after* event listeners and refocuses
+  it. The creation handler calls `textareaRef.current?.focus()` synchronously, but the
+  default action fires a moment later and steals the focus back, firing a spurious blur
+  on the textarea. With delete-on-blank-blur wired in, that deleted the object before the
+  creating click finished. The tool was completely broken in every real browser and entirely
+  green in jsdom, which dispatches no native default actions at all.
+- **Fix / conclusion:** defer the `focus()` call by one tick with `setTimeout(..., 0)`,
+  so the browser's default action resolves first and finds the textarea already focused.
+  General lesson: `tabIndex` on a region without explicit focus management is a trap — the
+  browser will refocus it on interaction unless you explicitly defer user-code focus. And
+  this class of bug is **invisible in jsdom**, which is exactly why throwaway Playwright
+  specs that drive the real browser catch things unit tests never will.
+- **Graduated to:** candidate for `my-process/docs/knowledge/` alongside the jsdom entries
+  — together: "jsdom has no native defaults and no layout, so test high-risk interactions
+  in a real browser."
+
+---
+
+## 2026-09-25 — a popup rendered before its trigger in the DOM breaks forward Tab
+
+- **Symptom:** opening a shape-tool flyout made the open popup visually reachable, but Tab
+  forward abandoned it and left the toolbar entirely; only Shift+Tab could get back into
+  it.
+- **Cause:** Tab order is driven by DOM order, not visual placement. The popup was rendered
+  *before* its trigger button in the component tree (`<Popup /> <button />`), so the
+  browser's native Tab sequence started at the popup's first button, moved through the rest
+  of its contents, and then to the next element after the trigger. Forward Tab from inside
+  the popup jumped over the trigger to whatever comes after, leaving the toolbar. Visually
+  the popup sat above the trigger via CSS `position` and `z-index`, so the discrepancy
+  between DOM order and visual stacking looked like a Tab bug.
+- **Fix / conclusion:** render the popup *after* its trigger in the DOM (`<button />
+  <Popup />`), which puts the trigger before its popup in Tab order (DOM order first, then
+  visual layering). Also move focus into the first button of the popup when it opens
+  (APG disclosure pattern), so the user's next Tab does not immediately leave it. Together,
+  these make Tab order match visual order.
+- **Graduated to:** not yet — watch for Tab-order issues in other disclosures to promote
+  it.
+
+---
+
+## 2026-09-25 — a mutation-testing reviewer can die mid-mutation
+
+- **Symptom:** a review dispatch's reporter announced its mutation was restored and clean.
+  Later commits had merged successfully, but when checking `git status` on the branch, a
+  deliberate bug marker (`MUTATION-TEST`) was found in the working tree — the mutation
+  had never been restored.
+- **Cause:** the reviewer was killed by a session rate limit (429) between mutating a file
+  and restoring it, leaving the deliberate bug in place. The agent's final report was
+  never written or sent (the process exited), so the state of the tree was unknown to the
+  next operation.
+- **Fix / conclusion:** always `git status` before the next operation after a mutation
+  dispatch, whether or not the reporter mentions mutations. And when a reviewer does
+  mutate source, restore it in the very next tool call after confirming the test failure,
+  not after further analysis — shorten the window where an interruption can leave you
+  stranded. If a rate-limited reviewer's report never arrives, check the tree before
+  proceeding.
+- **Graduated to:** not yet — this is a procedural issue specific to mutation-testing
+  reviews, not a bug in the codebase.
+
