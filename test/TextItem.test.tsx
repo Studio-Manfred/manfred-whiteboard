@@ -151,8 +151,10 @@ describe('TextItem', () => {
     // committed either.
     const onUpdate = vi.fn()
     const blank: TextElement = { ...text, text: '' }
-    render(<TextItem element={blank} {...props} onUpdate={onUpdate} />)
-    // Mounts straight into edit mode: Round 1's fix for `text === ''`.
+    // startEditing mirrors what App.tsx passes for the element it just
+    // created locally (STU-953 critical fix) — this ghost path only exists
+    // in the creating tab, never a remote peer's.
+    render(<TextItem element={blank} {...props} onUpdate={onUpdate} startEditing />)
     const box = screen.getByRole('textbox')
     fireEvent.change(box, { target: { value: 'typed but never blurred' } })
     fireEvent.keyDown(box, { key: 'Escape' })

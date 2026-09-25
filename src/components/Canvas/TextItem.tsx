@@ -31,6 +31,16 @@ interface TextItemProps {
   isDragging?: boolean
   /** Defaults to a lazily-created canvas measurer; tests inject their own. */
   measure?: Measure
+  /**
+   * True only for the one element the local tab just created — never derive
+   * this from shared document data (e.g. `element.text === ''`). Every peer's
+   * `elementsMap` sync sees the same freshly created empty element; deriving
+   * edit mode from it opened a textarea on every client at once, and one
+   * peer's next click on dead canvas deleted another peer's in-progress
+   * object (STU-953 critical fix — see App.tsx's `justCreatedTextId`).
+   * Defaults to false so remote peers always mount non-editing.
+   */
+  startEditing?: boolean
 }
 
 export function TextItem({
@@ -43,15 +53,18 @@ export function TextItem({
   onResizeByKeyboard,
   isDragging = false,
   measure,
+  startEditing = false,
 }: TextItemProps) {
-  // A freshly created object is always empty text, and empty text is always
-  // deleted on blur (see `commit` below) — so the only way an element with
-  // `text === ''` can exist is if it was *just* created and never blurred
-  // yet. Starting it in edit mode means the user who picked Text and clicked
-  // the canvas can type immediately, with no double-click needed, and it
-  // means a change of heart (blur with nothing typed) actually reaches
-  // `commit` instead of never entering edit at all and leaving a ghost.
-  const [isEditing, setIsEditing] = useState(element.text === '')
+  // Starting a freshly created object in edit mode means the user who picked
+  // Text and clicked the canvas can type immediately, with no double-click
+  // needed, and it means a change of heart (blur with nothing typed) actually
+  // reaches `commit` instead of never entering edit at all and leaving a
+  // ghost. `startEditing` is a *local* creation signal passed by the parent
+  // only for the element this tab just made — it must not be derived from
+  // `element.text === ''` (shared document data), or every peer would mount
+  // straight into edit mode for an element they did not create. See this
+  // prop's doc comment above for the incident that taught us that.
+  const [isEditing, setIsEditing] = useState(startEditing)
   const [draft, setDraft] = useState(element.text)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const activeMeasure = measure ?? defaultMeasure()

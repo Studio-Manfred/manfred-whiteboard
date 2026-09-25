@@ -109,6 +109,15 @@ export default function App() {
   const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null)
   // Null until the user picks one, so new notes keep their random pastel.
   const [defaultFill, setDefaultFill] = useState<string | null>(null)
+  // The id of the text object *this tab* just created, so only that tab
+  // opens it straight into edit mode. Must never be derived from shared
+  // document data (e.g. `element.text === ''`) — every peer's `elementsMap`
+  // sees the same freshly created empty element, and auto-editing it on
+  // every client is what let one peer's click delete another peer's
+  // in-progress object (STU-953 critical fix). This is local-only and does
+  // not need to be cleared: it is compared by exact id, so it only ever
+  // matches the one element it was set for.
+  const [justCreatedTextId, setJustCreatedTextId] = useState<string | null>(null)
   const roomName = getRoomFromUrl()
 
   // ----------- CRDT Connection & Sync -----------
@@ -259,6 +268,7 @@ export default function App() {
         const text = createTextElement(worldPoint, { zIndex: elements.size + 1 })
         createElement(text)
         setSelectedIds(new Set([text.id]))
+        setJustCreatedTextId(text.id)
         setActiveTool('select')
         return
       }
@@ -805,6 +815,7 @@ export default function App() {
               onResizeByKeyboard={(handle, delta) =>
                 handleResizeByKeyboard(element.id, handle, delta)
               }
+              startEditing={element.id === justCreatedTextId}
             />
           ) : (
             <ShapeItem
