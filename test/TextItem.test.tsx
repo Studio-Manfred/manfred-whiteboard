@@ -63,6 +63,14 @@ describe('TextItem', () => {
     expect(screen.getByTestId('text-body')).toHaveStyle({ color: '#dc2626' })
   })
 
+  it('honours an explicit text alignment, not just the left default', () => {
+    // This is the assertion that would have caught effectiveTextAlign
+    // returning null for text: supportsProperty(el, 'align') advertised a
+    // control that effectiveTextAlign silently ignored.
+    render(<TextItem element={{ ...text, textAlign: 'center' }} {...props} />)
+    expect(screen.getByTestId('text-body')).toHaveStyle({ textAlign: 'center' })
+  })
+
   it('offers only the east and west resize handles', () => {
     render(<TextItem element={text} {...props} isSelected onResizeStart={vi.fn()} onResizeByKeyboard={vi.fn()} />)
     expect(screen.getByRole('button', { name: /right edge/i })).toBeInTheDocument()

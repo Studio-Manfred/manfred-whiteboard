@@ -116,13 +116,15 @@ export function textPaddingFor(element: BoardElement): number | null {
   return null
 }
 
-/** How each type has always looked, so existing boards are unchanged. */
-const DEFAULT_TEXT_ALIGNS = { sticky: 'left', shape: 'center' } as const
+/** How each type has always looked, so existing boards are unchanged. Text
+ * is bare words on a board, not a label centred in a box, so it starts left. */
+const DEFAULT_TEXT_ALIGNS = { sticky: 'left', shape: 'center', text: 'left' } as const
 
 /** The alignment an element's text is actually drawn with. */
 export function effectiveTextAlign(element: BoardElement): TextAlign | null {
   if (element.type === 'sticky') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.sticky
   if (element.type === 'shape') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.shape
+  if (element.type === 'text') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.text
   return null
 }
 
@@ -136,6 +138,9 @@ const DEFAULT_FONT_SIZES = { sticky: 16, shape: 14 } as const
 export function effectiveFontSize(element: BoardElement): number | null {
   if (element.type === 'sticky') return element.fontSize ?? DEFAULT_FONT_SIZES.sticky
   if (element.type === 'shape') return element.fontSize ?? DEFAULT_FONT_SIZES.shape
+  // TextElement.fontSize is required, unlike sticky/shape's optional field —
+  // no default to fall back to, or a fall back to hide.
+  if (element.type === 'text') return element.fontSize
   return null
 }
 

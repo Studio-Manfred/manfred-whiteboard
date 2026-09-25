@@ -197,6 +197,11 @@ describe('effectiveFontSize', () => {
     expect(effectiveFontSize(arrow)).toBeNull()
     expect(effectiveFontSize(ink)).toBeNull()
   })
+
+  it('reports a text element\'s own size, which is required rather than defaulted', () => {
+    expect(effectiveFontSize(text)).toBe(16)
+    expect(effectiveFontSize({ ...text, fontSize: 32 })).toBe(32)
+  })
 })
 
 describe('effectiveTextAlign', () => {
@@ -214,6 +219,14 @@ describe('effectiveTextAlign', () => {
   it('has nothing to report for elements without text', () => {
     expect(effectiveTextAlign(arrow)).toBeNull()
     expect(effectiveTextAlign(ink)).toBeNull()
+  })
+
+  it('starts a bare text object left-aligned, not centred like a shape label', () => {
+    expect(effectiveTextAlign(text)).toBe('left')
+  })
+
+  it('reports a text element\'s explicit alignment rather than falling back', () => {
+    expect(effectiveTextAlign({ ...text, textAlign: 'center' })).toBe('center')
   })
 
   it('offers the three alignments', () => {
