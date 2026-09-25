@@ -11,6 +11,7 @@ describe('toolForShortcut', () => {
     expect(toolForShortcut('l')).toBe('connector')
     expect(toolForShortcut('p')).toBe('pen')
     expect(toolForShortcut('e')).toBe('eraser')
+    expect(toolForShortcut('t')).toBe('text')
   })
 
   it('is case-insensitive', () => {
@@ -27,6 +28,6 @@ describe('toolForShortcut', () => {
   it('covers every tool exactly once', () => {
     const tools = Object.values(TOOL_SHORTCUTS)
     expect(new Set(tools).size).toBe(tools.length)
-    expect(tools).toHaveLength(8)
+    expect(tools).toHaveLength(9)
   })
 })

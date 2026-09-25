@@ -10,6 +10,7 @@ import type {
   DrawingElement,
   ShapeElement,
   StickyElement,
+  TextElement,
 } from '../types/whiteboard'
 
 export interface BoardLayers {
@@ -17,14 +18,21 @@ export interface BoardLayers {
   shapes: ShapeElement[]
   connectors: ConnectorElement[]
   drawings: DrawingElement[]
+  texts: TextElement[]
 }
 
 /**
- * Splits the board into the four lists the canvas renders. Element types with
- * no layer of their own (frames) are skipped.
+ * Splits the board into the five lists the canvas renders. Element types with
+ * no layer of their own (the dead `frame` type) are skipped.
  */
 export function partitionElements(elements: ReadonlyMap<string, BoardElement>): BoardLayers {
-  const layers: BoardLayers = { stickies: [], shapes: [], connectors: [], drawings: [] }
+  const layers: BoardLayers = {
+    stickies: [],
+    shapes: [],
+    connectors: [],
+    drawings: [],
+    texts: [],
+  }
 
   elements.forEach((el) => {
     switch (el.type) {
@@ -40,10 +48,9 @@ export function partitionElements(elements: ReadonlyMap<string, BoardElement>): 
       case 'drawing':
         layers.drawings.push(el)
         break
-      // TODO(STU-953): placeholder until Task 6 gives text a layer — see docs/context/STU-953.md
-      // Text has no BoardLayers array yet, so it is dropped here and never
-      // reaches the canvas. There is no `default` clause, so nothing will
-      // typecheck-fail to remind us.
+      case 'text':
+        layers.texts.push(el)
+        break
     }
   })
 

@@ -11,6 +11,7 @@ export const TOOL_SHORTCUTS: Record<string, CanvasTool> = {
   l: 'connector',
   p: 'pen',
   e: 'eraser',
+  t: 'text',
 }
 
 /** The tool a key selects, or null when the key is not a tool shortcut. */

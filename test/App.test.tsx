@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import * as Y from 'yjs'
 import { createWhiteboardDoc } from '../src/types/whiteboard'
 import { patternIdFor, patternLabel } from '../src/lib/fill-patterns'
@@ -59,6 +59,12 @@ const CANVAS = /Interactive canvas workspace/
 function canvas() {
   return screen.getByRole('region', { name: CANVAS })
 }
+
+// TextItem's own testid, `text-<id>`, shares the `text-` prefix with its
+// nested `text-body`/`text-line` testids (used to reach the rendered body
+// while editing) — this excludes those two so a prefix match finds only the
+// object itself, not a piece of it.
+const TEXT_OBJECT = /^text-(?!body$|line$)/
 
 // Rectangle/Circle live behind the toolbar's Shape flyout (STU-953) — opening
 // it first keeps every existing `pickTool('Rectangle')` call working.
@@ -140,6 +146,33 @@ describe('App', () => {
     clickCanvasAt(300, 300)
 
     expect(document.querySelectorAll('[data-testid^="shape-"]')).toHaveLength(1)
+  })
+
+  it('creates a text object where the canvas is clicked', async () => {
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    expect(await screen.findByTestId(TEXT_OBJECT)).toBeInTheDocument()
+  })
+
+  it('removes a text object whose text is emptied', async () => {
+    // Review Focus 1: an invisible object nobody can select is a trap. Empty
+    // text — and whitespace-only text, which is invisible but not '' — both
+    // delete the element rather than leaving a zero-height ghost on the board.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    const el = await screen.findByTestId(TEXT_OBJECT)
+    fireEvent.doubleClick(within(el).getByTestId('text-body'))
+    const box = screen.getByRole('textbox')
+    fireEvent.change(box, { target: { value: '   ' } })
+    fireEvent.blur(box)
+
+    expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
   })
 
   it('deletes the selected element with the Delete key', () => {

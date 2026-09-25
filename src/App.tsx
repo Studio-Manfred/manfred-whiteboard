@@ -3,6 +3,7 @@ import type * as Y from 'yjs'
 import { CanvasViewport, type CanvasTool } from './components/Canvas/CanvasViewport'
 import { StickyNote } from './components/Canvas/StickyNote'
 import { ShapeItem } from './components/Canvas/ShapeItem'
+import { TextItem } from './components/Canvas/TextItem'
 import { ConnectorLayer } from './components/Canvas/ConnectorLayer'
 import { DrawingLayer } from './components/Canvas/DrawingLayer'
 import { DrawingItem } from './components/Canvas/DrawingItem'
@@ -19,6 +20,7 @@ import {
   createShapeElement,
   createDrawingElement,
   createConnectorElement,
+  createTextElement,
 } from './lib/element-factories'
 import { partitionElements, findElementAt } from './lib/board-selectors'
 import { elementsInMarquee, rectFromPoints } from './lib/marquee'
@@ -48,6 +50,7 @@ import type {
   BoardElement,
   UserAwareness,
   AnchorPosition,
+  TextElement,
 } from './types/whiteboard'
 
 const localUser = generateUser()
@@ -213,6 +216,22 @@ export default function App() {
     addElement(conn, el)
   }, [])
 
+  /**
+   * An emptied text object leaves nothing to see or select, so it goes —
+   * whitespace-only text counts as empty too, since it is just as invisible
+   * and just as impossible to click back into.
+   */
+  const updateTextElement = useCallback((element: TextElement, patch: Partial<TextElement>) => {
+    const conn = connectionRef.current
+    if (!conn) return
+
+    if (patch.text !== undefined && patch.text.trim() === '') {
+      removeElements(conn, [element.id])
+      return
+    }
+    patchElement(conn, element.id, patch)
+  }, [])
+
   // ----------- Canvas Pointer Handlers -----------
   const handleCanvasPointerDown = useCallback(
     (worldPoint: Point) => {
@@ -232,6 +251,14 @@ export default function App() {
         })
         createElement(sticky)
         setSelectedIds(new Set([sticky.id]))
+        setActiveTool('select')
+        return
+      }
+
+      if (activeTool === 'text') {
+        const text = createTextElement(worldPoint, { zIndex: elements.size + 1 })
+        createElement(text)
+        setSelectedIds(new Set([text.id]))
         setActiveTool('select')
         return
       }
@@ -688,9 +715,9 @@ export default function App() {
   })()
 
   // ----------- Derived element lists -----------
-  const { stickies, shapes, connectors, drawings } = partitionElements(elements)
+  const { stickies, shapes, connectors, drawings, texts } = partitionElements(elements)
   // One list, so any object can sit above any other whatever its type.
-  const stackedElements = [...shapes, ...stickies, ...drawings].sort(
+  const stackedElements = [...shapes, ...stickies, ...drawings, ...texts].sort(
     (a, b) => a.zIndex - b.zIndex || a.createdAt - b.createdAt
   )
 
@@ -752,6 +779,20 @@ export default function App() {
               onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(element.id, anchor)}
               showAnchors={showAllAnchors}
               highlightedAnchor={anchorHighlightFor(element.id)}
+              onResizeStart={(handle, e) => handleResizeStart(element.id, handle, e)}
+              onResizeByKeyboard={(handle, delta) =>
+                handleResizeByKeyboard(element.id, handle, delta)
+              }
+            />
+          ) : element.type === 'text' ? (
+            <TextItem
+              key={element.id}
+              element={element}
+              isSelected={selectedIds.has(element.id)}
+              isDragging={draggingIds.has(element.id)}
+              onSelect={(e) => handleElementSelect(element.id, e)}
+              onUpdate={(patch) => updateTextElement(element, patch)}
+              onDragStart={(e) => handleDragStart(element.id, pointerWorld(e), e)}
               onResizeStart={(handle, e) => handleResizeStart(element.id, handle, e)}
               onResizeByKeyboard={(handle, delta) =>
                 handleResizeByKeyboard(element.id, handle, delta)

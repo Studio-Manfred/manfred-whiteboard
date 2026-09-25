@@ -16,7 +16,7 @@ function element(partial: Partial<BoardElement> & { id: string; type: BoardEleme
 }
 
 describe('partitionElements', () => {
-  it('splits a board into its four rendered lists', () => {
+  it('splits a board into its five rendered lists', () => {
     const elements = new Map<string, BoardElement>([
       ['s1', element({ id: 's1', type: 'sticky' })],
       ['r1', element({ id: 'r1', type: 'shape' })],
@@ -33,6 +33,14 @@ describe('partitionElements', () => {
     expect(drawings.map((e) => e.id)).toEqual(['d1'])
   })
 
+  it('gives text objects a layer of their own', () => {
+    const textEl = element({ id: 't1', type: 'text' })
+
+    const layers = partitionElements(new Map([[textEl.id, textEl]]))
+
+    expect(layers.texts).toEqual([textEl])
+  })
+
   it('ignores element types with no layer of their own', () => {
     const elements = new Map<string, BoardElement>([
       ['f1', element({ id: 'f1', type: 'frame' })],
@@ -44,6 +52,7 @@ describe('partitionElements', () => {
     expect(result.shapes).toEqual([])
     expect(result.connectors).toEqual([])
     expect(result.drawings).toEqual([])
+    expect(result.texts).toEqual([])
   })
 
   it('returns empty lists for an empty board', () => {
@@ -52,6 +61,7 @@ describe('partitionElements', () => {
       shapes: [],
       connectors: [],
       drawings: [],
+      texts: [],
     })
   })
 })
@@ -77,5 +87,16 @@ describe('findElementAt', () => {
   it('treats the edges as inside', () => {
     expect(findElementAt(elements, { x: 0, y: 0 })).toBe('low')
     expect(findElementAt(elements, { x: 100, y: 100 })).not.toBeNull()
+  })
+
+  it('hit-tests a text element like any other', () => {
+    // containsPoint reads only x/y/width/height, but this was never actually
+    // exercised with type 'text' until now — an object that cannot be
+    // clicked cannot be selected.
+    const withText = new Map<string, BoardElement>([
+      ['t1', element({ id: 't1', type: 'text', x: 0, y: 0, width: 100, height: 40, zIndex: 1 })],
+    ])
+
+    expect(findElementAt(withText, { x: 50, y: 20 })).toBe('t1')
   })
 })
