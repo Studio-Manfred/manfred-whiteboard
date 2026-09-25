@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TextItem } from '../src/components/Canvas/TextItem'
 import type { TextElement } from '../src/types/whiteboard'
+import { LINE_HEIGHT, type Measure } from '../src/lib/text-layout'
 
 const text: TextElement = {
   id: 'x1', type: 'text', x: 0, y: 0, width: 100, height: 27,
@@ -30,12 +31,16 @@ describe('TextItem', () => {
     expect(onUpdate.mock.calls[0][0].height).not.toBe(999)
   })
 
-  it('does not write the height back when it already agrees', () => {
-    // Review Focus 5: a patch per keystroke would flood the undo stack.
+  it('stays silent on mount when the stored height already agrees', () => {
+    // Round 1 review: the previous version of this test re-rendered with the
+    // same element and the same onUpdate, so the dependency array never
+    // changed and React never re-ran the effect at all — it proved React's
+    // semantics, not the guard. A mutation deleting `Math.abs(...) > 0.5`
+    // still passed it. This fixture's height (27) already equals what
+    // 'hello' at fontSize 20 lays out to, so a correct guard stays silent on
+    // the very first render, and a missing one fires on mount.
     const onUpdate = vi.fn()
-    const { rerender } = render(<TextItem element={text} {...props} onUpdate={onUpdate} />)
-    onUpdate.mockClear()
-    rerender(<TextItem element={text} {...props} onUpdate={onUpdate} />)
+    render(<TextItem element={text} {...props} onUpdate={onUpdate} />)
     expect(onUpdate).not.toHaveBeenCalled()
   })
 
@@ -48,11 +53,38 @@ describe('TextItem', () => {
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ height: expect.any(Number) }))
   })
 
-  it('corrects a stale height arriving from a peer', () => {
-    // Review Focus 4: the text is the truth, the height is a cache.
+  it('corrects a stale height that arrives mid-session from a peer', () => {
+    // Round 1 review: a fresh mount with a wrong height never distinguishes
+    // "corrects on mount" from "corrects mid-session" — dropping
+    // element.height from the effect's dependencies (so it would never react
+    // to a later peer update) also passed the old version of this test. The
+    // rerender with a *different* element object is what forces the effect
+    // to run again after mount, the way a real peer patch would.
     const onUpdate = vi.fn()
-    render(<TextItem element={{ ...text, height: 4 }} {...props} onUpdate={onUpdate} />)
-    expect(onUpdate).toHaveBeenCalled()
+    const { rerender } = render(<TextItem element={text} {...props} onUpdate={onUpdate} />)
+    onUpdate.mockClear()
+    rerender(<TextItem element={{ ...text, height: 4 }} {...props} onUpdate={onUpdate} />)
+    expect(onUpdate).toHaveBeenCalledWith({ height: 27 })
+  })
+
+  it('patches a non-zero height for empty text, matching what it draws', () => {
+    // Round 1 review, Important: the component drew
+    // Math.max(layout.height, fontSize * LINE_HEIGHT) but patched
+    // layout.height alone. For any non-empty text the Math.max is a no-op,
+    // so this only bites empty text — which draws a visible, clickable box
+    // (so you can click into an empty text object to type into it) while
+    // storing height 0, a document that thinks the box doesn't exist.
+    // Hit-testing, marquee selection and export bounds would all miss it.
+    const onUpdate = vi.fn()
+    const empty: TextElement = { ...text, text: '', height: 0 }
+    const expectedHeight = empty.fontSize * LINE_HEIGHT
+
+    render(<TextItem element={empty} {...props} onUpdate={onUpdate} />)
+
+    expect(onUpdate).toHaveBeenCalledWith({ height: expectedHeight })
+    expect(screen.getByTestId(`text-${empty.id}`)).toHaveStyle({
+      height: `${expectedHeight}px`,
+    })
   })
 
   it('renders textColor when set, and slate-800 when not', () => {
@@ -89,5 +121,43 @@ describe('TextItem', () => {
     fireEvent.blur(box)
 
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ text: 'changed' }))
+  })
+
+  it('abandons the edit on Escape without writing back', () => {
+    // Round 1 review, Important ruling: Escape abandons rather than commits
+    // — matching StickyNote and what Escape means in a text field. Enter is
+    // deliberately untouched, so the textarea's own newline-insertion stays.
+    const onUpdate = vi.fn()
+    render(<TextItem element={text} {...props} onUpdate={onUpdate} />)
+    fireEvent.doubleClick(screen.getByTestId('text-body'))
+
+    const box = screen.getByRole('textbox')
+    fireEvent.change(box, { target: { value: 'changed' } })
+    fireEvent.keyDown(box, { key: 'Escape' })
+
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(screen.getByTestId('text-body')).toHaveTextContent('hello')
+  })
+
+  it('recomputes layout when the font family changes, via an injected measurer', () => {
+    // Round 1 review, Accepted (measurer injectability): jsdom's real canvas
+    // is unavailable, so the default fallback (an average-glyph estimate)
+    // never varies by font family — no test could previously distinguish
+    // "recomputed for the new family" from "recomputed but got the same
+    // wrapping anyway". A measurer that actually differs by family, injected
+    // through the new `measure` prop, makes that provable.
+    const varyByFamily: Measure = (line, font) =>
+      font.includes('monospace') ? line.length * 20 : line.length * 5
+
+    const wide = { ...text, text: 'hello world', width: 60 }
+    const { rerender } = render(<TextItem element={wide} {...props} measure={varyByFamily} />)
+    const sansLineCount = screen.getAllByTestId('text-line').length
+
+    rerender(
+      <TextItem element={{ ...wide, fontFamily: 'mono' }} {...props} measure={varyByFamily} />
+    )
+    const monoLineCount = screen.getAllByTestId('text-line').length
+
+    expect(monoLineCount).not.toBe(sansLineCount)
   })
 })
