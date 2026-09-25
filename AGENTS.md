@@ -73,6 +73,11 @@ dispatches; most of the avoidable cost was in the briefs, not the work.
   serialise what actually depends on the previous output.
 - **State assumptions as assumptions.** "Verify X; I believe it is Y" invites
   the correction that asserting Y as fact buries.
+- **Log every dispatch in that file** — role, model, tokens, tool calls, what it
+  produced and what it caught. Tokens and calls come from the completion notice.
+  The "caught" column is the point: it is the only way to learn which roles earn
+  their cost. Note what was worn rather than dispatched too, since wearing a hat
+  does not change the model and dispatching does.
 - **Do not optimise away mutation-verification.** A tester that proves its
   assertions bite — by building a throwaway implementation and deliberately
   breaking it — is the most expensive practice here and the highest-value one.

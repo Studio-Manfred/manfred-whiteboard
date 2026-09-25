@@ -50,6 +50,19 @@ This is the part that pays for the file.>
 ## Out of scope
 <What a well-meaning agent might helpfully do that you do not want done,
 and why. Cheaper to say here than to review out later.>
+
+## Dispatch log
+<One row per dispatch, filled in as each returns. Tokens and tool calls come
+from the completion notice. "Caught" is the point of the table: it is how you
+find out which roles are earning their cost.>
+
+| # | Role | Model | Tokens | Calls | Produced | Caught |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | tester | Opus | 119k | 28 | 29 red specs | its own bad assertion |
+
+<Also note what was WORN rather than dispatched, and why. Wearing a hat does
+not change the model — only dispatching does — so the distinction is the whole
+point of the record.>
 ```
 
 ## Rules that earn their keep
