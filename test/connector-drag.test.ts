@@ -36,6 +36,39 @@ function ink(id: string): BoardElement {
   }
 }
 
+// 240×40, so a label at (500,0) has anchors at (620,0) (740,20) (620,40) (500,20).
+function label(id: string, x: number, y: number): BoardElement {
+  return {
+    id,
+    type: 'text',
+    x,
+    y,
+    width: 240,
+    height: 40,
+    zIndex: 1,
+    text: 'hello',
+    fontSize: 20,
+    createdAt: 0,
+    updatedAt: 0,
+  }
+}
+
+function frame(id: string, x: number, y: number): BoardElement {
+  return {
+    id,
+    type: 'frame',
+    x,
+    y,
+    width: 400,
+    height: 300,
+    zIndex: 1,
+    title: 'Frame 1',
+    fillColor: '#ffffff',
+    createdAt: 0,
+    updatedAt: 0,
+  }
+}
+
 function arrow(id: string): BoardElement {
   return {
     id,
@@ -76,6 +109,18 @@ describe('elementAnchors', () => {
 
   it('carries the element id on every candidate', () => {
     expect(elementAnchors(note('a', 0, 0)).every((c) => c.elementId === 'a')).toBe(true)
+  })
+
+  it('gives a text object the same four edge midpoints', () => {
+    // Geometry only — nothing here reads the element type, which is why text
+    // needs no arithmetic of its own.
+    const anchors = elementAnchors(label('t', 500, 0))
+
+    expect(anchors).toHaveLength(4)
+    expect(anchors.find((c) => c.anchor === 'top')!.point).toEqual({ x: 620, y: 0 })
+    expect(anchors.find((c) => c.anchor === 'right')!.point).toEqual({ x: 740, y: 20 })
+    expect(anchors.find((c) => c.anchor === 'bottom')!.point).toEqual({ x: 620, y: 40 })
+    expect(anchors.find((c) => c.anchor === 'left')!.point).toEqual({ x: 500, y: 20 })
   })
 })
 
@@ -121,6 +166,48 @@ describe('findSnapTarget', () => {
 
     expect(findSnapTarget(odd, { x: 50, y: 620 }, { excludeId: 'a' })).toBeNull()
     expect(findSnapTarget(odd, { x: 0, y: 0 }, { excludeId: 'a' })).toBeNull()
+  })
+
+  it('treats a text object as a valid endpoint', () => {
+    const withText = new Map<string, BoardElement>([
+      ['a', note('a', 0, 0)],
+      ['t', label('t', 500, 0)],
+    ])
+
+    // 5 world units short of the label's left anchor at (500,20).
+    const target = findSnapTarget(withText, { x: 495, y: 20 }, { excludeId: 'a' })
+
+    expect(target).toMatchObject({ elementId: 't', anchor: 'left' })
+    expect(target!.point).toEqual({ x: 500, y: 20 })
+  })
+
+  it('snaps to a text object released over its body, as it does for a note', () => {
+    const withText = new Map<string, BoardElement>([
+      ['a', note('a', 0, 0)],
+      ['t', label('t', 500, 0)],
+    ])
+
+    // Inside the label, nearest its top edge.
+    const target = findSnapTarget(withText, { x: 620, y: 12 }, { excludeId: 'a' })
+
+    expect(target).toMatchObject({ elementId: 't', anchor: 'top' })
+  })
+
+  it('still refuses frames and drawings, which have geometry but are not endpoints', () => {
+    // The negative half of the gate. Both have real x/y/width/height, so
+    // nothing downstream would object to snapping to them — only the type
+    // gate keeps them out, and widening it for text must not widen it here.
+    const mixed = new Map<string, BoardElement>([
+      ['a', note('a', 0, 0)],
+      ['f', frame('f', 500, 0)],
+      ['ink', ink('ink')],
+    ])
+
+    // Right on the frame's left anchor (500,150) and inside its body.
+    expect(findSnapTarget(mixed, { x: 500, y: 150 }, { excludeId: 'a' })).toBeNull()
+    expect(findSnapTarget(mixed, { x: 700, y: 150 }, { excludeId: 'a' })).toBeNull()
+    // Right on the stroke's left anchor (0,625).
+    expect(findSnapTarget(mixed, { x: 0, y: 625 }, { excludeId: 'a' })).toBeNull()
   })
 
   it('returns null on an empty board', () => {

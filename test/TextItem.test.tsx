@@ -162,6 +162,82 @@ describe('TextItem', () => {
     expect(onUpdate).toHaveBeenCalledWith({ text: '' })
   })
 
+  // STU-972: a text object is an arrow endpoint, so it carries the same four
+  // anchors a sticky note does. Assertions deliberately mirror
+  // StickyNote.test.tsx rather than inventing a second vocabulary — the
+  // accessible name is what a screen-reader user hears on either element, and
+  // two spellings of it would be the bug.
+  it('offers a labelled connection anchor on each side', () => {
+    const onAnchorDragStart = vi.fn()
+    render(<TextItem element={text} {...props} onAnchorDragStart={onAnchorDragStart} />)
+
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      expect(
+        screen.getByRole('button', { name: `Connect from ${side} anchor` })
+      ).toBeInTheDocument()
+    }
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Connect from bottom anchor' }))
+    expect(onAnchorDragStart).toHaveBeenCalledWith('bottom', expect.anything())
+  })
+
+  it('offers a keyboard route, since a drag is pointer-only', () => {
+    // WCAG 2.1.1: drawing an arrow cannot be the only way to connect, or a
+    // keyboard-only user can never make one.
+    const onAnchorKeyActivate = vi.fn()
+    render(<TextItem element={text} {...props} onAnchorKeyActivate={onAnchorKeyActivate} />)
+    const anchor = screen.getByRole('button', { name: 'Connect from left anchor' })
+
+    // detail 0 is how a browser reports Enter or Space on a button
+    fireEvent.click(anchor, { detail: 0 })
+    expect(onAnchorKeyActivate).toHaveBeenCalledWith('left')
+
+    // a real mouse click carries detail >= 1 and must not double-fire
+    onAnchorKeyActivate.mockClear()
+    fireEvent.click(anchor, { detail: 1 })
+    expect(onAnchorKeyActivate).not.toHaveBeenCalled()
+  })
+
+  it('does not select or drag the text object when an anchor is pressed', () => {
+    // Fresh mocks, not the shared `props` ones: pointerdown on the box itself
+    // selects and starts a drag, so an anchor that lets the event through
+    // moves the text instead of drawing an arrow.
+    const onSelect = vi.fn()
+    const onDragStart = vi.fn()
+    render(
+      <TextItem
+        element={text}
+        isSelected={false}
+        onSelect={onSelect}
+        onUpdate={vi.fn()}
+        onDragStart={onDragStart}
+        onAnchorDragStart={vi.fn()}
+      />
+    )
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Connect from right anchor' }))
+
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(onDragStart).not.toHaveBeenCalled()
+  })
+
+  it('shows its anchors on demand and marks the one an arrow would land on', () => {
+    render(
+      <TextItem element={text} {...props} showAnchors highlightedAnchor="right" />
+    )
+
+    expect(screen.getByRole('button', { name: 'Connect from top anchor' }).className).toContain(
+      'opacity-100'
+    )
+    expect(screen.getByRole('button', { name: 'Connect from right anchor' })).toHaveAttribute(
+      'data-snap-target',
+      'true'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Connect from top anchor' })
+    ).not.toHaveAttribute('data-snap-target')
+  })
+
   it('recomputes layout when the font family changes, via an injected measurer', () => {
     // Round 1 review, Accepted (measurer injectability): jsdom's real canvas
     // is unavailable, so the default fallback (an average-glyph estimate)
