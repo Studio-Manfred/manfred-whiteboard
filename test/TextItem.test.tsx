@@ -238,6 +238,36 @@ describe('TextItem', () => {
     ).not.toHaveAttribute('data-snap-target')
   })
 
+  // STU-972 ruling (not in the original design): the design assumed anchors
+  // sitting outside the box would not fight the textarea; rather than verify
+  // that assumption, it was dropped — while typing, you are not connecting.
+  // The four anchor tests above all render non-editing, so this pair is the
+  // only permanent guard on the edit-mode side of that ruling.
+  it('presents all four anchors when not editing', () => {
+    render(<TextItem element={text} {...props} />)
+
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      expect(
+        screen.queryByRole('button', { name: `Connect from ${side} anchor` })
+      ).toBeInTheDocument()
+    }
+  })
+
+  it('presents no anchors while the object is being edited', () => {
+    render(<TextItem element={text} {...props} startEditing />)
+
+    expect(screen.getByRole('textbox')).toBeInTheDocument()
+    // Absent from the document, not merely hidden — the real-browser check
+    // confirmed this is what the component actually does (the anchor block
+    // is gated with `&&`, not an opacity/visibility class), so this asserts
+    // absence rather than a CSS visibility property.
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      expect(
+        screen.queryByRole('button', { name: `Connect from ${side} anchor` })
+      ).not.toBeInTheDocument()
+    }
+  })
+
   it('recomputes layout when the font family changes, via an injected measurer', () => {
     // Round 1 review, Accepted (measurer injectability): jsdom's real canvas
     // is unavailable, so the default fallback (an average-glyph estimate)

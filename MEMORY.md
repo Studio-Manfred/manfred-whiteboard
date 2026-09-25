@@ -11,6 +11,47 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-25 — STU-972 · connect arrows to text objects, connector cleanup on delete · shipped
+
+- **Shipped:** text objects are valid arrow endpoints — the same four edge anchors
+  (`onAnchorDragStart`, `onAnchorKeyActivate`, `showAnchors`, `highlightedAnchor`) sticky
+  notes and shapes already had, copied from `StickyNote.tsx`'s pattern and wired into
+  `App.tsx`'s `TextItem` branch. `canBeAnEndpoint` (`src/lib/connector-drag.ts`) grew one
+  line to admit `type === 'text'`; frames and drawings stay refused. Separately,
+  `removeElements` (`src/lib/board-mutations.ts`) now deletes any connector whose `fromId`
+  or `toId` points at an element being removed, inside the same `transact()` as the
+  deletion, for every element type. Branch `feat/STU-972-connect-text`: red commit
+  bfd7f22 (14 pre-written failing specs across `board-mutations.test.ts`,
+  `connector-drag.test.ts`, `TextItem.test.tsx`, left untouched throughout), green commit
+  fd32402 (builder), plus a follow-up round adding a jsdom regression test for the
+  edit-mode anchor ruling and this entry. All six gates green (unit 742, typecheck, lint,
+  coverage ratchet held, E2E 78).
+- **Decisions:**
+  - Connector cleanup lives in `removeElements` itself, not special-cased for text — one
+    fix closes STU-862 for every element type (sticky, shape, text, and connectors
+    joining two elements that are both being deleted in the same call) rather than just
+    the type this ticket happened to be about.
+  - This closes the leak going forward only: it prevents *new* orphaned connectors from
+    being created, but does not sweep connectors already orphaned on existing boards
+    before this shipped. That cleanup, if wanted, is a separate piece of work.
+  - Anchors are hidden — absent from the DOM, not just visually hidden — while a text
+    object is being edited. The original design left this as an unverified assumption
+    (anchors sitting outside the box wouldn't fight the textarea); rather than verify it,
+    the assumption was dropped: while typing, you are not connecting. Regression-locked
+    in `TextItem.test.tsx` (two tests: all four anchors present when not editing, zero
+    anchors in the document while editing) — confirmed by deliberately removing the
+    `!isEditing` gate and watching the edit-mode test fail before restoring it.
+  - `board-mutations.ts`'s header comment claimed every mutation transacts inside one Yjs
+    transaction; `patchElement` never has (no `elementOrder` change to keep in step with).
+    Corrected the comment to explain why, rather than just deleting the false claim.
+    `patchElement`'s behaviour is unchanged.
+- **Next pickup:** the pre-existing orphan sweep (connectors already broken on boards from
+  before this ticket) is unaddressed and would need its own ticket. STU-927 (properties
+  bar clipping the left edge on narrow viewports) is still open and was worked around
+  again in throwaway E2E coordinates, same as `fill-pattern.spec.ts` already does.
+
+---
+
 ## 2026-09-25 — STU-953 · text objects with auto-height · shipped
 
 - **Shipped:** eight-task SDD branch (feat/STU-953-text-object, commits 52b07ba..c1ae46e,
