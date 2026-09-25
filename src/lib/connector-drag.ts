@@ -24,7 +24,7 @@ export interface AnchorCandidate {
 
 /** Only elements with real geometry can hold an arrow. */
 function canBeAnEndpoint(element: BoardElement): boolean {
-  return element.type === 'sticky' || element.type === 'shape'
+  return element.type === 'sticky' || element.type === 'shape' || element.type === 'text'
 }
 
 /** The four edge midpoints an arrow can attach to. */

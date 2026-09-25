@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import type { TextElement } from '../../types/whiteboard'
+import type { AnchorPosition, TextElement } from '../../types/whiteboard'
 import { ResizeHandles } from './ResizeHandles'
 import { handlesFor, type ResizeHandle } from '../../lib/resize'
 import type { Point } from '../../lib/coordinates'
@@ -26,6 +26,14 @@ interface TextItemProps {
   onSelect: (e: React.PointerEvent) => void
   onUpdate: (updated: Partial<TextElement>) => void
   onDragStart: (e: React.PointerEvent) => void
+  /** Pointer press on an anchor: begins dragging an arrow out of it. */
+  onAnchorDragStart?: (anchor: AnchorPosition, e: React.PointerEvent) => void
+  /** Keyboard activation of an anchor — dragging is not available by keyboard. */
+  onAnchorKeyActivate?: (anchor: AnchorPosition) => void
+  /** Show the anchors regardless of hover, while an arrow is being drawn. */
+  showAnchors?: boolean
+  /** The anchor a dragged arrow would currently land on. */
+  highlightedAnchor?: AnchorPosition | null
   onResizeStart?: (handle: ResizeHandle, e: React.PointerEvent) => void
   onResizeByKeyboard?: (handle: ResizeHandle, delta: Point) => void
   isDragging?: boolean
@@ -49,6 +57,10 @@ export function TextItem({
   onSelect,
   onUpdate,
   onDragStart,
+  onAnchorDragStart,
+  onAnchorKeyActivate,
+  showAnchors = false,
+  highlightedAnchor = null,
   onResizeStart,
   onResizeByKeyboard,
   isDragging = false,
@@ -125,6 +137,7 @@ export function TextItem({
   // read through the helper rather than assuming that, so this follows if
   // the decision in element-style.ts ever changes.
   const textPadding = textPaddingFor(element) ?? 0
+  const anchors: AnchorPosition[] = ['top', 'right', 'bottom', 'left']
 
   const commit = () => {
     setIsEditing(false)
@@ -219,6 +232,54 @@ export function TextItem({
           ))}
         </div>
       )}
+
+      {/* 4 Connection Anchors — hidden while editing: the ruling here departs
+          from the original design, which assumed anchors sitting outside the
+          box would not fight the textarea. Rather than verify that
+          assumption, it was dropped: while typing, you are not connecting. */}
+      {!isEditing &&
+        anchors.map((anchor) => {
+          // Sit clear of the resize handles, which straddle the edge itself:
+          // overlapping them made an anchor impossible to click once
+          // selection put the handles on screen (matches StickyNote).
+          const positionClasses = {
+            top: '-top-5 left-1/2 -translate-x-1/2',
+            right: '-right-5 top-1/2 -translate-y-1/2',
+            bottom: '-bottom-5 left-1/2 -translate-x-1/2',
+            left: '-left-5 top-1/2 -translate-y-1/2',
+          }[anchor]
+
+          const isSnapTarget = highlightedAnchor === anchor
+
+          return (
+            <button
+              key={anchor}
+              type="button"
+              aria-label={`Connect from ${anchor} anchor`}
+              data-snap-target={isSnapTarget ? 'true' : undefined}
+              // Pointer down must not reach the element beneath: it would
+              // select it and start dragging the element instead of drawing
+              // an arrow.
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                onAnchorDragStart?.(anchor, e)
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                // detail 0 means the button was activated from the
+                // keyboard, where dragging is not an option.
+                if (e.detail === 0) onAnchorKeyActivate?.(anchor)
+              }}
+              className={`absolute ${positionClasses} w-3.5 h-3.5 border-2 border-white rounded-full transition-all cursor-crosshair z-40 shadow-sm ${
+                showAnchors || isSnapTarget ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              } ${
+                isSnapTarget
+                  ? 'bg-blue-600 scale-150 ring-2 ring-blue-300'
+                  : 'bg-blue-500 hover:scale-125'
+              }`}
+            />
+          )
+        })}
 
       {isSelected && onResizeStart && onResizeByKeyboard && (
         <ResizeHandles
