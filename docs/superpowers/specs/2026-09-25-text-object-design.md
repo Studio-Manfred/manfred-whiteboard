@@ -149,7 +149,15 @@ recomputes the layout and patches `height`. `measureText` is memoised per
 - `createTextElement(at, options)` in `element-factories.ts`. Defaults:
   `width` 240, `fontSize` 16, `textAlign` left, no `textColor` (which renders
   as today's `slate-800`). Clicking with the tool creates one at the default
-  width; dragging sets the width. Both then grow in height as you type.
+  width, already in edit mode so you can type immediately. Width is then set
+  with the east/west resize handles.
+
+  **Drag-to-size creation is out of scope** (Ruling 32). The spec originally
+  said dragging sets the width at creation; no task implemented it, and
+  `createTextElement`'s `width` option has no production caller as a result.
+  The capability exists in two steps — create, then drag a handle — so adding
+  a second creation interaction late and untested is worse than deferring it.
+  Filed separately.
 - `supportsProperty`: text objects get `font`, `align`, `stacking` and the new
   `textColor`; they opt out of `fill`, `border`, `pattern` and `thickness`.
   `textColor` is also true for `sticky` and `shape`.
