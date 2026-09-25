@@ -17,6 +17,7 @@ import {
   fontFamilyStack,
   textPaddingFor,
 } from './element-style'
+import { canvasMeasure, layoutText, LINE_HEIGHT, type Measure } from './text-layout'
 import type { Rect } from './marquee'
 import type {
   TextAlign,
@@ -25,12 +26,12 @@ import type {
   DrawingElement,
   ShapeElement,
   StickyElement,
+  TextElement,
 } from '../types/whiteboard'
 
 /** Breathing room around the outermost elements. */
 export const EXPORT_PADDING = 40
 const EMPTY_BOARD = { width: 640, height: 480 }
-const LINE_HEIGHT = 1.35
 /** Rough average glyph width relative to font size — enough to wrap sensibly. */
 const GLYPH_RATIO = 0.55
 
@@ -97,6 +98,19 @@ function wrapText(text: string, width: number, fontSize: number): string[] {
   })
 }
 
+let exportMeasure: Measure | undefined
+
+/** The export runs in the browser, so it measures with the same real metrics
+ * the canvas does. Created on first use: calling getContext at import time
+ * makes jsdom noisy for every file that imports this module. canvasMeasure
+ * already handles its own fallback to estimateMeasure when there is no canvas. */
+function measureForExport() {
+  if (!exportMeasure) {
+    exportMeasure = canvasMeasure()
+  }
+  return exportMeasure
+}
+
 /** SVG has no text alignment: the anchor and the x both have to move. */
 function textAnchorFor(align: TextAlign): string {
   if (align === 'center') return 'middle'
@@ -108,6 +122,26 @@ function textXFor(align: TextAlign, left: number, width: number, padding: number
   if (align === 'center') return left + width / 2
   if (align === 'right') return left + width - padding
   return left + padding
+}
+
+/** Bare words: no card, no border, one tspan per laid-out line. */
+function textSvg(el: TextElement): string {
+  const { lines } = layoutText(el.text, el.width, el, measureForExport())
+  if (lines.length === 0) return ''
+
+  const align = effectiveTextAlign(el) ?? 'left'
+  const x = textXFor(align, el.x, el.width, 0)
+  const lineHeight = el.fontSize * LINE_HEIGHT
+
+  const tspans = lines
+    .map((line, i) => `<tspan x="${x}" y="${el.y + el.fontSize + i * lineHeight}">${escapeXml(line)}</tspan>`)
+    .join('')
+
+  return (
+    `<text font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
+    `font-size="${el.fontSize}" text-anchor="${textAnchorFor(align)}" ` +
+    `fill="${escapeXml(el.textColor ?? '#1e293b')}">${tspans}</text>`
+  )
 }
 
 function stickySvg(el: StickyElement): string {
@@ -132,7 +166,7 @@ function stickySvg(el: StickyElement): string {
     (tspans
       ? `<text font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
         `font-size="${fontSize}" text-anchor="${textAnchorFor(align)}" ` +
-        `fill="#1e293b">${tspans}</text>`
+        `fill="${escapeXml(el.textColor ?? '#1e293b')}">${tspans}</text>`
       : '')
   )
 }
@@ -207,7 +241,7 @@ function shapeLabelSvg(el: ShapeElement): string {
     `<text x="${x}" y="${el.y + el.height / 2 + fontSize / 3}" ` +
     `text-anchor="${textAnchorFor(align)}" ${halo}` +
     `font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
-    `font-size="${fontSize}" fill="#1e293b">${escapeXml(el.text)}</text>`
+    `font-size="${fontSize}" fill="${escapeXml(el.textColor ?? '#1e293b')}">${escapeXml(el.text)}</text>`
   )
 }
 
@@ -260,6 +294,8 @@ function elementSvg(el: BoardElement, elements: ReadonlyMap<string, BoardElement
       return drawingSvg(el)
     case 'connector':
       return connectorSvg(el, elements)
+    case 'text':
+      return textSvg(el)
     default:
       return ''
   }

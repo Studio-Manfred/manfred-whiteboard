@@ -1,7 +1,7 @@
 import * as Y from 'yjs'
 import type { FillPattern } from '../lib/fill-patterns'
 
-export type ElementType = 'sticky' | 'shape' | 'frame' | 'connector' | 'drawing'
+export type ElementType = 'sticky' | 'shape' | 'frame' | 'connector' | 'drawing' | 'text'
 export type AnchorPosition = 'top' | 'right' | 'bottom' | 'left'
 export type ShapeKind = 'rectangle' | 'circle'
 
@@ -30,6 +30,8 @@ export interface StickyElement extends BaseElement {
   fontSize: number
   fontFamily?: FontFamily
   textAlign?: TextAlign
+  /** Undefined renders as slate-800, which is what every label does today. */
+  textColor?: string
 }
 
 export interface ShapeElement extends BaseElement {
@@ -45,12 +47,29 @@ export interface ShapeElement extends BaseElement {
   /** Undefined means a solid fill, so every shape drawn before patterns
    * existed renders byte for byte as it did. */
   pattern?: FillPattern
+  /** Undefined renders as slate-800, which is what every label does today. */
+  textColor?: string
 }
 
 export interface FrameElement extends BaseElement {
   type: 'frame'
   title: string
   fillColor: string
+}
+
+/**
+ * Bare text on the board. `width` is set by the user; `height` is derived from
+ * the layout and written back by whichever client is editing, so that every
+ * consumer of `.height` keeps working without knowing text can reflow.
+ */
+export interface TextElement extends BaseElement {
+  type: 'text'
+  text: string
+  fontSize: number
+  fontFamily?: FontFamily
+  textAlign?: TextAlign
+  /** Undefined renders as slate-800, which is what every label does today. */
+  textColor?: string
 }
 
 export interface ConnectorElement extends BaseElement {
@@ -89,6 +108,7 @@ export type BoardElement =
   | FrameElement
   | ConnectorElement
   | DrawingElement
+  | TextElement
 
 export interface UserAwareness {
   user: {

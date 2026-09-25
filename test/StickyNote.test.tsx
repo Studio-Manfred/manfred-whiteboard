@@ -60,6 +60,30 @@ describe('StickyNote Component', () => {
     expect(handleUpdate).toHaveBeenCalledWith({ text: 'Updated Brainstorm' })
   })
 
+  it('renders textColor when set, and slate-800 when not', () => {
+    const { rerender } = render(
+      <StickyNote
+        element={sampleSticky}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+    expect(screen.getByText('Initial Idea')).toHaveStyle({ color: 'rgb(30, 41, 59)' })
+
+    rerender(
+      <StickyNote
+        element={{ ...sampleSticky, textColor: '#dc2626' }}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onUpdate={vi.fn()}
+        onDragStart={vi.fn()}
+      />
+    )
+    expect(screen.getByText('Initial Idea')).toHaveStyle({ color: '#dc2626' })
+  })
+
   it('prompts the reader when the note is still empty', () => {
     render(
       <StickyNote

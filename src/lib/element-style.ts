@@ -21,6 +21,7 @@ export type StyleProperty =
   | 'stacking'
   | 'align'
   | 'pattern'
+  | 'textColor'
 
 export type Arrowheads = 'none' | 'start' | 'end' | 'both'
 
@@ -57,7 +58,7 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
       return element.type === 'connector' || element.type === 'drawing'
     case 'font':
     case 'align':
-      return element.type === 'sticky' || element.type === 'shape'
+      return element.type === 'sticky' || element.type === 'shape' || element.type === 'text'
     case 'arrowheads':
       return element.type === 'connector'
     case 'stacking':
@@ -67,6 +68,10 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
     case 'pattern':
       // Only ShapeElement carries `pattern`, and only ShapeItem draws one.
       return element.type === 'shape'
+    case 'textColor':
+      // Every type with a label can recolour it; a connector's stroke and
+      // ink's stroke already have their own colour control instead.
+      return element.type === 'sticky' || element.type === 'shape' || element.type === 'text'
     default:
       return false
   }
@@ -98,28 +103,33 @@ export const TEXT_ALIGNS: ReadonlyArray<{ value: TextAlign; label: string }> = [
 ]
 
 /** Base inset between an element's edge and its text. */
-export const TEXT_PADDING = { sticky: 16, shape: 12 } as const
+export const TEXT_PADDING = { sticky: 16, shape: 12, text: 0 } as const
 
 /**
  * How far text sits from an element's edge.
  *
  * A shape's stroke is drawn centred on its bounds, so half of it falls inside:
  * a thick border would otherwise crowd the label against the edge. The inset
- * grows with the border instead.
+ * grows with the border instead. A bare text object has no border to lean on,
+ * so padding would only push words away from bounds nobody can see and make
+ * the selection outline sit wide of the text.
  */
 export function textPaddingFor(element: BoardElement): number | null {
   if (element.type === 'sticky') return TEXT_PADDING.sticky
   if (element.type === 'shape') return TEXT_PADDING.shape + (element.strokeWidth ?? 2) / 2
+  if (element.type === 'text') return TEXT_PADDING.text
   return null
 }
 
-/** How each type has always looked, so existing boards are unchanged. */
-const DEFAULT_TEXT_ALIGNS = { sticky: 'left', shape: 'center' } as const
+/** How each type has always looked, so existing boards are unchanged. Text
+ * is bare words on a board, not a label centred in a box, so it starts left. */
+const DEFAULT_TEXT_ALIGNS = { sticky: 'left', shape: 'center', text: 'left' } as const
 
 /** The alignment an element's text is actually drawn with. */
 export function effectiveTextAlign(element: BoardElement): TextAlign | null {
   if (element.type === 'sticky') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.sticky
   if (element.type === 'shape') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.shape
+  if (element.type === 'text') return element.textAlign ?? DEFAULT_TEXT_ALIGNS.text
   return null
 }
 
@@ -133,6 +143,9 @@ const DEFAULT_FONT_SIZES = { sticky: 16, shape: 14 } as const
 export function effectiveFontSize(element: BoardElement): number | null {
   if (element.type === 'sticky') return element.fontSize ?? DEFAULT_FONT_SIZES.sticky
   if (element.type === 'shape') return element.fontSize ?? DEFAULT_FONT_SIZES.shape
+  // TextElement.fontSize is required, unlike sticky/shape's optional field —
+  // no default to fall back to, or a fall back to hide.
+  if (element.type === 'text') return element.fontSize
   return null
 }
 

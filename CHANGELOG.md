@@ -14,6 +14,20 @@ All notable changes to this project are documented here. The format follows
   chips are tiled SVG previews; shape labels get a halo in the shape's fill to sit legibly
   over dense ink (STU-925).
 
+- Text objects — bare text on an infinite canvas, no fill and no border. The user sets
+  the width; height is derived from the content and follows as they type. Width is
+  resizable via east and west handles; height is read-only. One style per object:
+  `text`, `fontSize`, optional `fontFamily` and `textAlign`, optional `textColor`. Text
+  objects get the same text colour control (colour picker in properties bar) that sticky
+  notes and shape labels now support, reaching all three from the same control. Creating
+  a text object enters edit mode immediately. Deleting all text (including a paste of
+  whitespace) or pressing Escape on a never-typed object removes it. Text layout is
+  computed by a single pure module (`src/lib/text-layout.ts`) that the canvas and export
+  both call, ensuring they wrap identically (STU-953).
+
+- A text colour control in the properties bar, reaching text objects, sticky-note text
+  and shape labels — all three were previously locked to `slate-800` (STU-953).
+
 - Freehand strokes are full objects: they resize by their handles (scaling the ink, not
   just its bounding box) and take part in stack order alongside notes and shapes. Colour
   and thickness already worked (STU-871).
@@ -72,6 +86,12 @@ All notable changes to this project are documented here. The format follows
 
 - Drawing an arrow no longer means clicking one dot and then another, with no feedback
   in between; clicking an element's body no longer completes a half-drawn connector.
+
+- The shape tools — rectangle, circle — now share one Shape button with a dropdown flyout,
+  since the toolbar at 393px viewport width has no room for a ninth separate button. The
+  flyout opens on click and closes on blur or when a shape is selected; arrow keys move
+  between the two shapes and Escape closes it. Shape shortcuts `R` and `C` still work and
+  are shown as titles on the flyout buttons (STU-953).
 
 - The toolbar is a `div` with `role="toolbar"` following the ARIA APG pattern — one tab
   stop, roving tabindex, arrow-key and Home/End focus movement — instead of a `nav`

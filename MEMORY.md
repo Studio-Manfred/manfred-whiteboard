@@ -11,6 +11,60 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-25 — STU-953 · text objects with auto-height · shipped
+
+- **Shipped:** eight-task SDD branch (feat/STU-953-text-object, commits 52b07ba..c1ae46e,
+  open as draft PR #19) delivering text objects: bare text on the canvas, user-set width,
+  height derived from content. `TextElement` carries `text`, `fontSize`, optional
+  `fontFamily`, `textAlign`, `textColor`. Height is stored (not recomputed) and follows as
+  the user types. Text colour control added to properties bar, reaching text objects,
+  sticky notes and shape labels. Text layout computed by a single pure module
+  (`src/lib/text-layout.ts`) that both canvas and export call, guaranteeing identical
+  wrapping. Shape tools grouped into one button with dropdown flyout to fit 393px
+  viewport. Creating text enters edit mode immediately. Deleting all text or Escape on a
+  never-typed object removes it. CI green on all six gates (unit, component, E2E, axe,
+  coverage, lint).
+- **Decisions:**
+  - Shape tools go behind a flyout button (not moved to the bar) — the toolbar is already
+    tight at 393px and this preserved the 40px button size, WCAG 2.5.5 target, and
+    keyboard shortcuts. APG disclosure pattern: flyout opens on Space/Enter, closes on
+    blur or selection.
+  - Whitespace-only lines are preserved as blank lines (not trimmed), so stored text
+    matches what was typed. Collapsing internal runs and trimming leading indentation
+    remain unchanged. Documented with regression tests.
+  - Height clamping happens at render time (Math.max drawn vs stored) not at patch time,
+    so the stored value is always visible — an empty object has height 0 in the document,
+    matching the JSON export.
+  - Undo coalescing: `useUndoRedo` does no coalescing itself; Y.UndoManager handles it at
+    yjs-provider.ts:58, defaulting to 500ms `captureTimeout`. Found by the review process,
+    not assumed.
+  - Measure injection seam (optional, lazy) makes the font-family half of text behaviour
+    testable and removes jsdom's getContext error noise at import time.
+  - Escape on a never-typed text object abandons the creation (removes it); Escape on text
+    with content preserves it. Regression-locked.
+- **Dispatch log captured:** 8 tasks, 7 dispatches (Task 8 is documenter, this session).
+  Task 1–2 implementation, review, and 2 fix rounds each (Haiku). Task 3 component +
+  element-style + resize (Sonnet, Opus review, 1 pre-review + 1 fix round). Task 4 export
+  (Haiku, Sonnet review, 1 fix round). Task 5 toolbar + keyboard (Sonnet, Opus review, 2
+  fix rounds, includes focus restoration bug fix). Task 6 wiring + selectors (Sonnet, Opus
+  review, 2 fix rounds, unauthorized PR push recovered). Task 7 text colour bar (Sonnet,
+  Sonnet review, 0 fix rounds, caught STU-927 regression). All commits message correctly
+  formatted; all tests passing; all mutation-verified fixes restored.
+- **Most valuable catches:**
+  - Three structural tests were self-fulfilling because they computed through shared maths
+    whether or not they exercised the feature. Mutation-testing caught all three.
+  - Focusing an input from the same pointerdown that created it loses a race: the canvas's
+    native tabIndex=0 default refocuses it after listeners finish, stealing focus before
+    the blur fired. Deferring focus one tick fixed it; only a real browser could see it.
+  - Board-selectors.ts had no owner (plan defect) and dropped every text element from the
+    render pipeline silently. Caught by the review process, not pre-existing.
+- **Next pickup:** open tickets STU-927 (panel clipping at screen edge), STU-964 (ten SVG
+  colour interpolations need escaping, text one was fixed inline), STU-926 (typecheck
+  project scope for specs). Dispatch log and whole-branch review details at
+  docs/superpowers/plans/2026-09-25-text-object.md.
+
+---
+
 ## 2026-09-24 — STU-925 · fill patterns for shapes · shipped
 
 - **Shipped:** five 1-bit mono fill patterns for shapes (hatch, crosshatch, dots/Ben-Day,

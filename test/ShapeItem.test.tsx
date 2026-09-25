@@ -79,6 +79,15 @@ describe('ShapeItem', () => {
     expect(screen.getByText('Discovery')).toBeInTheDocument()
   })
 
+  it('renders textColor when set, and slate-800 when not', () => {
+    renderShape({ text: 'Discovery' })
+    expect(screen.getByText('Discovery')).toHaveStyle({ color: 'rgb(30, 41, 59)' })
+    cleanup()
+
+    renderShape({ text: 'Discovery', textColor: '#dc2626' })
+    expect(screen.getByText('Discovery')).toHaveStyle({ color: '#dc2626' })
+  })
+
   it('edits the label on double click and commits it on blur', () => {
     const { handlers, node } = renderShape({ text: 'Before' })
 

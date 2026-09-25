@@ -4,9 +4,11 @@ import {
   createShapeElement,
   createDrawingElement,
   createConnectorElement,
+  createTextElement,
   strokeBounds,
   STICKY_SIZE,
   SHAPE_SIZE,
+  TEXT_DEFAULT_WIDTH,
 } from '../src/lib/element-factories'
 import { PASTEL_COLORS } from '../src/types/whiteboard'
 
@@ -161,5 +163,28 @@ describe('createConnectorElement', () => {
     )
 
     expect(connector).toMatchObject({ x: 0, y: 0, width: 0, height: 0 })
+  })
+})
+
+describe('createTextElement', () => {
+  it('starts empty at the default width, centred on the pointer', () => {
+    const el = createTextElement({ x: 100, y: 50 }, { zIndex: 3, id: 't1', now: 7 })
+
+    expect(el.type).toBe('text')
+    expect(el.text).toBe('')
+    expect(el.width).toBe(TEXT_DEFAULT_WIDTH)
+    expect(el.x).toBe(100 - TEXT_DEFAULT_WIDTH / 2)
+    expect(el.fontSize).toBe(16)
+    expect(el.id).toBe('t1')
+  })
+
+  it('takes a width when one is dragged', () => {
+    const el = createTextElement({ x: 0, y: 0 }, { zIndex: 1, width: 400 })
+    expect(el.width).toBe(400)
+  })
+
+  it('has no textColor, so it renders as every label does today', () => {
+    const el = createTextElement({ x: 0, y: 0 }, { zIndex: 1 })
+    expect(el.textColor).toBeUndefined()
   })
 })

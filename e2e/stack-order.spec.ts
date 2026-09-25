@@ -13,6 +13,15 @@ async function note(page: Page, x: number, y: number) {
   return page.locator('[data-testid^="sticky-"]').last()
 }
 
+/**
+ * Rectangle and circle live behind the toolbar's Shape flyout (STU-953) —
+ * opening it is now a prerequisite step before picking either one.
+ */
+async function pickShape(page: Page, name: 'Rectangle' | 'Circle') {
+  await page.getByRole('button', { name: 'Shape' }).click()
+  await page.getByRole('button', { name, exact: true }).click()
+}
+
 /** The id of whichever element is currently selected. */
 async function selectedId(page: Page) {
   return page
@@ -50,7 +59,7 @@ test('a shape can be brought above a note', async ({ page }) => {
   await page.goto(`/#room=stack-shape-${Date.now()}`)
   const canvas = page.getByRole('region', { name: CANVAS })
 
-  await page.getByRole('button', { name: 'Rectangle' }).click()
+  await pickShape(page, 'Rectangle')
   await canvas.click({ position: { x: 180, y: 220 } })
   const shape = page.locator('[data-testid^="shape-"]').first()
   await note(page, 200, 240)

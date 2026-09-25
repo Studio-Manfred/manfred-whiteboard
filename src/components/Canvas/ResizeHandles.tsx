@@ -28,9 +28,11 @@ interface ResizeHandlesProps {
   onResizeStart: (handle: ResizeHandle, e: React.PointerEvent) => void
   /** Arrow keys resize too — pointer-only would fail WCAG 2.1.1. */
   onResizeByKeyboard: (handle: ResizeHandle, delta: Point) => void
+  /** Defaults to all eight. Text passes only the horizontal pair. */
+  handles?: ResizeHandle[]
 }
 
-export function ResizeHandles({ onResizeStart, onResizeByKeyboard }: ResizeHandlesProps) {
+export function ResizeHandles({ onResizeStart, onResizeByKeyboard, handles }: ResizeHandlesProps) {
   const handleKeyDown = (e: React.KeyboardEvent, handle: ResizeHandle) => {
     const direction = ARROW_DELTAS[e.key]
     if (!direction) return
@@ -43,7 +45,7 @@ export function ResizeHandles({ onResizeStart, onResizeByKeyboard }: ResizeHandl
 
   return (
     <>
-      {RESIZE_HANDLES.map((handle) => {
+      {(handles ?? RESIZE_HANDLES).map((handle) => {
         const anchor = handleAnchorPoint(handle)
 
         return (
