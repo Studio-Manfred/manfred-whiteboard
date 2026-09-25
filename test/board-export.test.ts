@@ -7,7 +7,9 @@ import type {
   DrawingElement,
   ShapeElement,
   StickyElement,
+  TextElement,
 } from '../src/types/whiteboard'
+import { layoutText, estimateMeasure } from '../src/lib/text-layout'
 
 function sticky(id: string, x = 0, y = 0, text = ''): StickyElement {
   return {
@@ -110,6 +112,23 @@ function connector(id: string, fromId: string, toId: string): ConnectorElement {
     style: 'curved',
     createdAt: 0,
     updatedAt: 0,
+  }
+}
+
+function textEl(over: Partial<TextElement> = {}): TextElement {
+  return {
+    id: 't1',
+    type: 'text',
+    x: 10,
+    y: 20,
+    width: 200,
+    height: 54,
+    zIndex: 1,
+    createdAt: 0,
+    updatedAt: 0,
+    text: 'hello world',
+    fontSize: 20,
+    ...over,
   }
 }
 
@@ -287,6 +306,26 @@ describe('boardToSvg', () => {
     expect(right).toContain('<tspan x="184"')
   })
 
+  it("uses a note's textColor when set", () => {
+    const svg = boardToSvg(board({ ...sticky('a', 0, 0, 'Hello'), textColor: '#dc2626' }))
+    expect(svg).toContain('fill="#dc2626"')
+  })
+
+  it("falls back to slate-800 for a note's text when textColor is unset", () => {
+    const svg = boardToSvg(board(sticky('a', 0, 0, 'Hello')))
+    expect(svg).toContain('fill="#1e293b"')
+  })
+
+  it("escapes a note's textColor so it cannot inject markup", () => {
+    // textColor is shared data from Yjs, so a peer can write any string even
+    // if the UI only offers palette swatches — the same trap as text objects.
+    const malicious = '"><script>alert("xss")</script><x="'
+    const svg = boardToSvg(board({ ...sticky('a', 0, 0, 'Hello'), textColor: malicious }))
+
+    expect(svg).toMatch(/<text[^>]*fill="&quot;&gt;/)
+    expect(svg).not.toContain('<script>')
+  })
+
   it("exports a shape's label, centred by default", () => {
     const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery' }))
 
@@ -298,6 +337,26 @@ describe('boardToSvg', () => {
     const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery', textAlign: 'left' }))
 
     expect(svg).toContain('text-anchor="start"')
+  })
+
+  it("uses a shape's textColor when set", () => {
+    const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery', textColor: '#16a34a' }))
+    expect(svg).toContain('fill="#16a34a"')
+  })
+
+  it("falls back to slate-800 for a shape label when textColor is unset", () => {
+    const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery' }))
+    expect(svg).toContain('fill="#1e293b"')
+  })
+
+  it("escapes a shape's textColor so it cannot inject markup", () => {
+    const malicious = '"><script>alert("xss")</script><x="'
+    const svg = boardToSvg(
+      board({ ...shape('s'), text: 'Discovery', textColor: malicious })
+    )
+
+    expect(svg).toMatch(/<text[^>]*fill="&quot;&gt;/)
+    expect(svg).not.toContain('<script>')
   })
 
   it('skips a connector whose endpoints are gone', () => {
@@ -420,6 +479,82 @@ describe('boardToSvg, with fill patterns', () => {
 
     expect(svg).toContain(`id="${patternIdFor('s')}"`)
     expect(svg).not.toContain('fill=""')
+  })
+})
+
+describe('boardToSvg, with text objects', () => {
+  it('emits one tspan per laid-out line', () => {
+    const el = textEl()
+    const expected = layoutText(el.text, el.width, el, estimateMeasure()).lines
+    const svg = boardToSvg(board(el))
+
+    expect(countOf(svg, '<tspan')).toBe(expected.length)
+  })
+
+  it('breaks exactly where the canvas breaks', () => {
+    // The whole point of the design: one module, one measurer, so the
+    // exported line breaks cannot drift from the ones on screen.
+    const el = textEl({ text: 'the quick brown fox jumps', width: 120 })
+    const measure = estimateMeasure()
+    const { lines } = layoutText(el.text, el.width, el, measure)
+    const svg = boardToSvg(board(el))
+
+    // Plain words, so no XML escaping is involved — assert them directly.
+    for (const line of lines) expect(svg).toContain(`>${line}</tspan>`)
+    expect(countOf(svg, '<tspan')).toBe(lines.length)
+  })
+
+  it('cuts a word too long for the line, which wrapText would not', () => {
+    // The guard against textSvg drifting back to its own wrapping. wrapText and
+    // estimateMeasure share the same 0.55 glyph ratio, so they agree on ordinary
+    // prose — an over-long word is where they part company, because only
+    // layoutText breaks mid-word.
+    const svg = boardToSvg(board(textEl({ text: 'A'.repeat(40), width: 120, fontSize: 20 })))
+
+    expect(countOf(svg, '<tspan')).toBeGreaterThan(1)
+  })
+
+  it('uses textColor when set', () => {
+    expect(boardToSvg(board(textEl({ textColor: '#dc2626' })))).toContain('fill="#dc2626"')
+  })
+
+  it('falls back to slate-800 when textColor is unset', () => {
+    expect(boardToSvg(board(textEl()))).toContain('fill="#1e293b"')
+  })
+
+  it('escapes malicious content in textColor so it cannot inject markup', () => {
+    // textColor is shared data from Yjs, so a peer can write any string even if
+    // the UI only offers palette swatches. Unescaped interpolation could close
+    // the fill attribute and inject markup.
+    const malicious = '"><script>alert("xss")</script><x="'
+    const svg = boardToSvg(board(textEl({ textColor: malicious })))
+
+    // If the value were not escaped, it would close the fill attribute and inject
+    // a script tag. With proper escaping, the fill attribute closes correctly and
+    // the text renders normally, with no injected markup.
+    expect(svg).toMatch(/<text[^>]*fill="&quot;&gt;/)
+    expect(svg).toContain('</text>')
+    expect(svg).toContain('<tspan')
+  })
+
+  it('draws no box, no fill and no border around it', () => {
+    const svg = withoutDefs(boardToSvg(board(textEl())))
+    // Only the page background rect; a text object paints nothing but words.
+    expect(countOf(svg, '<rect')).toBe(1)
+  })
+
+  it('emits nothing for an empty text object', () => {
+    expect(boardToSvg(board(textEl({ text: '' })))).not.toContain('<tspan')
+  })
+
+  it('moves the anchor when textAlign is set, not just left', () => {
+    // Mirrors the sticky note's own alignment test above. `textSvg` reads
+    // `align` for both `textAnchorFor` and `textXFor` — a hardcoded 'left'
+    // (i.e. always `text-anchor="start"`) would still pass every other test
+    // in this describe block, since none of them ever set textAlign.
+    const svg = boardToSvg(board(textEl({ textAlign: 'center' })))
+
+    expect(svg).toContain('text-anchor="middle"')
   })
 })
 

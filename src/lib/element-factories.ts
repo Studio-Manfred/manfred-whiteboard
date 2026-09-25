@@ -15,11 +15,13 @@ import {
   type ShapeElement,
   type ShapeKind,
   type StickyElement,
+  type TextElement,
 } from '../types/whiteboard'
 
 /** Sticky notes are square; shapes default to a landscape box. */
 export const STICKY_SIZE = 200
 export const SHAPE_SIZE = { width: 120, height: 100 } as const
+export const TEXT_DEFAULT_WIDTH = 240
 
 const DEFAULT_STROKE = '#0f172a'
 const CONNECTOR_STROKE = '#475569'
@@ -154,5 +156,26 @@ export function createConnectorElement(
     strokeColor: CONNECTOR_STROKE,
     strokeWidth: 2,
     style: 'curved',
+  }
+}
+
+interface TextOptions extends FactoryOptions {
+  width?: number
+}
+
+/** An empty text object centred on the pointer. Height is 0 until it has
+ * words — the editing client writes the real one once it lays them out. */
+export function createTextElement(at: Point, options: TextOptions): TextElement {
+  const width = options.width ?? TEXT_DEFAULT_WIDTH
+
+  return {
+    ...base(options),
+    type: 'text',
+    x: at.x - width / 2,
+    y: at.y,
+    width,
+    height: 0,
+    text: '',
+    fontSize: 16,
   }
 }

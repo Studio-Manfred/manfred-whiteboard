@@ -84,6 +84,7 @@ export function ShapeItem({
   const halo = tile
     ? `0 0 3px ${element.fillColor}, 0 0 3px ${element.fillColor}, 0 0 3px ${element.fillColor}`
     : undefined
+  const textColor = element.textColor ?? '#1e293b'
 
   return (
     <div
@@ -183,8 +184,9 @@ export function ShapeItem({
               fontFamily: fontFamilyStack(element.fontFamily),
               textAlign: effectiveTextAlign(element) ?? 'center',
               textShadow: halo,
+              color: textColor,
             }}
-            className="w-full bg-transparent outline-none font-medium text-slate-800"
+            className="w-full bg-transparent outline-none font-medium"
           />
         ) : (
           <span
@@ -193,8 +195,9 @@ export function ShapeItem({
               fontFamily: fontFamilyStack(element.fontFamily),
               textAlign: effectiveTextAlign(element) ?? 'center',
               textShadow: halo,
+              color: textColor,
             }}
-            className="block w-full text-slate-800 font-medium break-words"
+            className="block w-full font-medium break-words"
           >
             {element.text}
           </span>

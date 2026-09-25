@@ -76,6 +76,7 @@ export function StickyNote({
   const anchors: AnchorPosition[] = ['top', 'right', 'bottom', 'left']
   const textPadding = textPaddingFor(element) ?? 0
   const elevation = boxShadowClass(elevationFor({ isSelected, isDragging }))
+  const textColor = element.textColor ?? '#1e293b'
 
   return (
     <div
@@ -111,20 +112,22 @@ export function StickyNote({
           onChange={(e) => setText(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full h-full bg-transparent resize-none outline-none border-none text-slate-800 leading-snug cursor-text"
+          className="w-full h-full bg-transparent resize-none outline-none border-none leading-snug cursor-text"
           style={{
             fontSize: `${element.fontSize || 16}px`,
             fontFamily: fontFamilyStack(element.fontFamily),
             textAlign: effectiveTextAlign(element) ?? 'left',
+            color: textColor,
           }}
         />
       ) : (
         <div
-          className="w-full h-full whitespace-pre-wrap break-words text-slate-800 leading-snug overflow-hidden"
+          className="w-full h-full whitespace-pre-wrap break-words leading-snug overflow-hidden"
           style={{
             fontSize: `${element.fontSize || 16}px`,
             fontFamily: fontFamilyStack(element.fontFamily),
             textAlign: effectiveTextAlign(element) ?? 'left',
+            color: textColor,
           }}
         >
           {element.text || (

@@ -25,6 +25,18 @@ export const BORDER_SWATCHES: readonly string[] = [
   '#7c3aed', // Violet
 ]
 
+/** Near-black, slate, red, amber, green, blue, violet — dark enough to read
+ * as body text, on a note, a shape label or a bare text object alike. */
+export const TEXT_SWATCHES: readonly string[] = [
+  '#0f172a', // Ink
+  '#475569', // Slate
+  '#dc2626', // Red
+  '#d97706', // Amber
+  '#16a34a', // Green
+  '#2563eb', // Blue
+  '#7c3aed', // Violet
+]
+
 const COLOR_NAMES: Record<string, string> = {
   [NO_FILL]: 'No fill',
   '#FFF9B1': 'Sunbeam Yellow',
@@ -73,6 +85,21 @@ export function colorPatchFor(
 export function currentFillOf(element: BoardElement): string | null {
   if (element.type === 'sticky') return element.color
   if (element.type === 'shape') return element.fillColor || NO_FILL
+  return null
+}
+
+/**
+ * The text colour an element currently shows, or null when it has no label to
+ * colour at all. Never `undefined` for sticky/shape/text — mirrors
+ * `currentFillOf`'s sentinel so a mixed selection of a coloured and an
+ * uncoloured element compares as *disagreeing* rather than one of them
+ * silently dropping out of the comparison (the `sharedValue` trap from
+ * STU-925's fill patterns).
+ */
+export function currentTextColorOf(element: BoardElement): string | null {
+  if (element.type === 'sticky' || element.type === 'shape' || element.type === 'text') {
+    return element.textColor ?? '#1e293b'
+  }
   return null
 }
 

@@ -60,7 +60,20 @@ function canvas() {
   return screen.getByRole('region', { name: CANVAS })
 }
 
+// TextItem's own testid, `text-<id>`, shares the `text-` prefix with its
+// nested `text-body`/`text-line` testids (used to reach the rendered body
+// while editing) — this excludes those two so a prefix match finds only the
+// object itself, not a piece of it.
+const TEXT_OBJECT = /^text-(?!body$|line$)/
+
+// Rectangle/Circle live behind the toolbar's Shape flyout (STU-953) — opening
+// it first keeps every existing `pickTool('Rectangle')` call working.
+const SHAPE_TOOLS = ['Rectangle', 'Circle']
+
 function pickTool(name: string) {
+  if (SHAPE_TOOLS.includes(name)) {
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }))
+  }
   fireEvent.click(screen.getByRole('button', { name }))
 }
 
@@ -113,11 +126,11 @@ describe('App', () => {
   it('selects tools by keyboard shortcut', () => {
     render(<App />)
 
+    // Rectangle sits behind the closed Shape flyout, which doesn't
+    // auto-open on a shortcut — the group button reflects the active tool
+    // instead (see "the shape group" in Toolbar.test.tsx).
     fireEvent.keyDown(window, { key: 'r' })
-    expect(screen.getByRole('button', { name: 'Rectangle' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    )
+    expect(screen.getByRole('button', { name: 'Shape' })).toHaveAttribute('aria-pressed', 'true')
 
     fireEvent.keyDown(window, { key: 'v' })
     expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute(
@@ -133,6 +146,87 @@ describe('App', () => {
     clickCanvasAt(300, 300)
 
     expect(document.querySelectorAll('[data-testid^="shape-"]')).toHaveLength(1)
+  })
+
+  it('creates a text object where the canvas is clicked', async () => {
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    expect(await screen.findByTestId(TEXT_OBJECT)).toBeInTheDocument()
+  })
+
+  it('removes a text object whose text is emptied', async () => {
+    // Review Focus 1: an invisible object nobody can select is a trap. Empty
+    // text — and whitespace-only text, which is invisible but not '' — both
+    // delete the element rather than leaving a zero-height ghost on the board.
+    // Creation opens straight into edit mode (Round 1 review fix), so there
+    // is no text-body to double-click into first.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    const box = await screen.findByRole('textbox')
+    fireEvent.change(box, { target: { value: '   ' } })
+    fireEvent.blur(box)
+
+    expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
+  })
+
+  it('deletes a freshly placed text object if nothing is typed before clicking away', async () => {
+    // Round 1 review, Important: creation used to never enter edit mode, so
+    // a change of heart right after placing one never reached `commit` at
+    // all — this is the most likely flow of all to hit the ghost.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    const box = await screen.findByRole('textbox')
+    fireEvent.blur(box)
+
+    expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
+  })
+
+  it('removes a freshly placed text object when Escape is pressed before typing anything', async () => {
+    // Round 2 review, Important: the third ghost path. abandon() used to
+    // only exit edit mode and restore the draft, so pressing Escape right
+    // after creation left a blank, invisible, hit-testable object behind —
+    // reached by the exact key a user presses precisely when they want out.
+    // A brand-new object has no committed text to restore *to*, so
+    // abandoning it now abandons the creation too.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    fireEvent.keyDown(await screen.findByRole('textbox'), { key: 'Escape' })
+
+    expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
+  })
+
+  it('keeps an existing text object and its text unchanged when Escape is pressed after editing', async () => {
+    // Round 2 review — the regression guard: an object that already has
+    // committed text keeps exactly today's behaviour on Escape (discard the
+    // in-progress draft, keep the object), so a future reader cannot
+    // "simplify" the fix above into deleting on every Escape.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+    const box = await screen.findByRole('textbox')
+    fireEvent.change(box, { target: { value: 'first draft' } })
+    fireEvent.blur(box)
+
+    const el = screen.getByTestId(TEXT_OBJECT)
+    fireEvent.doubleClick(el)
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'a different draft' } })
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' })
+
+    expect(screen.getByTestId(TEXT_OBJECT)).toBeInTheDocument()
+    expect(screen.getByTestId('text-line')).toHaveTextContent('first draft')
   })
 
   it('deletes the selected element with the Delete key', () => {

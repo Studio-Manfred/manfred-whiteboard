@@ -5,9 +5,11 @@ import { BarPopover } from './BarPopover'
 import {
   BORDER_SWATCHES,
   FILL_SWATCHES,
+  TEXT_SWATCHES,
   NO_FILL,
   colorName,
   currentFillOf,
+  currentTextColorOf,
 } from '../../lib/element-colors'
 import {
   effectiveFontSize,
@@ -81,6 +83,7 @@ export interface PropertiesBarProps {
   onStackChange: (command: StackCommand) => void
   onTextAlignChange: (align: TextAlign) => void
   onPatternChange: (pattern: FillPattern | undefined) => void
+  onTextColorChange: (color: string) => void
 }
 
 function Swatch({
@@ -226,6 +229,7 @@ export function PropertiesBar({
   onStackChange,
   onTextAlignChange,
   onPatternChange,
+  onTextColorChange,
 }: PropertiesBarProps) {
   // The bar's width depends on how many controls the selection needs, so it
   // has to measure itself to sit centred over that selection.
@@ -243,6 +247,7 @@ export function PropertiesBar({
       'stroke',
       'thickness',
       'font',
+      'textColor',
       'align',
       'arrowheads',
       'stacking',
@@ -302,6 +307,16 @@ export function PropertiesBar({
       (el) => currentPatternOf(el) === currentPatternOf(patternTargets[0])
     )
       ? currentPatternOf(patternTargets[0])
+      : null
+  // Same reasoning as `currentPattern` above, not `sharedValue`: an element
+  // with no explicit textColor must not silently drop out of the comparison.
+  const textColorTargets = selection.filter((el) => supportsProperty(el, 'textColor'))
+  const currentTextColor =
+    textColorTargets.length > 0 &&
+    textColorTargets.every(
+      (el) => currentTextColorOf(el) === currentTextColorOf(textColorTargets[0])
+    )
+      ? currentTextColorOf(textColorTargets[0])
       : null
 
   useLayoutEffect(() => {
@@ -523,6 +538,35 @@ export function PropertiesBar({
             </span>
           </BarPopover>
         </>
+      )}
+
+      {has('textColor') && (
+        <BarPopover
+          label="Text colour"
+          {...nextItem()}
+          panelPlacement={panelPlacement}
+          renderPanel={(close) => (
+            <div className="flex items-center gap-1.5">
+              {TEXT_SWATCHES.map((color) => (
+                <Swatch
+                  key={color}
+                  color={color}
+                  isCurrent={color === currentTextColor}
+                  onSelect={() => {
+                    onTextColorChange(color)
+                    close()
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        >
+          <span
+            aria-hidden="true"
+            style={{ backgroundColor: currentTextColor ?? '#1e293b' }}
+            className="w-5 h-5 rounded-full border border-slate-300"
+          />
+        </BarPopover>
       )}
 
       {has('stacking') && (

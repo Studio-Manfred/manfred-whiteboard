@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
 import { PropertiesBar } from '../src/components/UI/PropertiesBar'
-import { FILL_SWATCHES } from '../src/lib/element-colors'
+import { FILL_SWATCHES, TEXT_SWATCHES, colorName } from '../src/lib/element-colors'
 import { FILL_PATTERNS, patternLabel, patternTile } from '../src/lib/fill-patterns'
-import type { BoardElement, ConnectorElement, ShapeElement, StickyElement } from '../src/types/whiteboard'
+import type { BoardElement, ConnectorElement, ShapeElement, StickyElement, TextElement } from '../src/types/whiteboard'
 
 const note: StickyElement = {
   id: 'n', type: 'sticky', x: 0, y: 0, width: 200, height: 200, zIndex: 1,
@@ -27,6 +27,18 @@ const ink: BoardElement = {
   points: [], strokeColor: '#ef4444', strokeWidth: 3, createdAt: 0, updatedAt: 0,
 }
 
+const text: TextElement = {
+  id: 't', type: 'text', x: 0, y: 0, width: 240, height: 22, zIndex: 1,
+  text: 'hi', fontSize: 16, createdAt: 0, updatedAt: 0,
+}
+
+// Aliases matching the names the text-colour spec below reads, without
+// duplicating the fixtures the rest of this file already relies on.
+const textElement = text
+const stickyElement = note
+const shapeElement = shape
+const connectorElement = arrow
+
 function renderBar(selection: BoardElement[]) {
   const handlers = {
     onFillChange: vi.fn(),
@@ -38,8 +50,9 @@ function renderBar(selection: BoardElement[]) {
     onStackChange: vi.fn(),
     onTextAlignChange: vi.fn(),
     onPatternChange: vi.fn(),
+    onTextColorChange: vi.fn(),
   }
-  render(
+  const { unmount } = render(
     <PropertiesBar
       selection={selection}
       bounds={{ x: 200, y: 300, width: 200, height: 200 }}
@@ -47,7 +60,7 @@ function renderBar(selection: BoardElement[]) {
       {...handlers}
     />
   )
-  return handlers
+  return { ...handlers, unmount }
 }
 
 const control = (name: string) => screen.queryByRole('button', { name })
@@ -77,6 +90,7 @@ describe('PropertiesBar', () => {
         onStackChange={vi.fn()}
         onTextAlignChange={vi.fn()}
         onPatternChange={vi.fn()}
+        onTextColorChange={vi.fn()}
       />
     )
 
@@ -307,6 +321,40 @@ describe('PropertiesBar', () => {
     )
   })
 
+  describe('text colour', () => {
+    it('offers the row for a text object, a note and a shape', () => {
+      for (const el of [textElement, stickyElement, shapeElement]) {
+        const { unmount } = renderBar([el])
+        expect(screen.getByRole('button', { name: 'Text colour' })).toBeInTheDocument()
+        unmount()
+      }
+    })
+
+    it('does not offer it for an arrow', () => {
+      renderBar([connectorElement])
+      expect(screen.queryByRole('button', { name: 'Text colour' })).not.toBeInTheDocument()
+    })
+
+    it('applies the colour that was chosen', () => {
+      const handlers = renderBar([textElement])
+      fireEvent.click(screen.getByRole('button', { name: 'Text colour' }))
+      fireEvent.click(screen.getByRole('button', { name: colorName(TEXT_SWATCHES[1]) }))
+
+      expect(handlers.onTextColorChange).toHaveBeenCalledWith(TEXT_SWATCHES[1])
+    })
+
+    it('marks nothing active when two elements disagree', () => {
+      renderBar([textElement, { ...textElement, id: 'b', textColor: '#dc2626' }])
+      fireEvent.click(screen.getByRole('button', { name: 'Text colour' }))
+      // queryAllByRole, not getAllByRole: the get* family throws on zero
+      // matches (its contract is "at least one"), which would fire before
+      // the length assertion ever ran — zero pressed buttons is exactly the
+      // case under test.
+      const pressed = screen.queryAllByRole('button', { pressed: true })
+      expect(pressed).toHaveLength(0)
+    })
+  })
+
   describe('fill patterns', () => {
     /**
      * The chip that clears the pattern, named the way the fill palette names
@@ -326,8 +374,9 @@ describe('PropertiesBar', () => {
     it('costs the bar no button of its own, so it still fits a phone', () => {
       renderBar([shape])
 
-      // Fill, border, thickness, text size, font, stack order, alignment.
-      expect(screen.getAllByRole('button')).toHaveLength(7)
+      // Fill, border, thickness, text size, font, text colour, stack order,
+      // alignment.
+      expect(screen.getAllByRole('button')).toHaveLength(8)
       expect(control('Fill pattern')).not.toBeInTheDocument()
       expect(control('Pattern')).not.toBeInTheDocument()
     })

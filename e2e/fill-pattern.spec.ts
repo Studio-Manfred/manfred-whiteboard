@@ -27,7 +27,19 @@ const patternDefId = (elementId: string) => `pattern-${elementId}`
  */
 function shapeSpot(page: Page) {
   const width = page.viewportSize()?.width ?? 1280
-  return { x: width >= 700 ? 420 : 200, y: 300 }
+  // The mobile offset grew with STU-953's text-colour control: an eighth
+  // trigger widens the bar, which shifts Fill (its leftmost control) further
+  // left too, so the old 200 no longer clears STU-927 on a narrow viewport.
+  return { x: width >= 700 ? 420 : 280, y: 300 }
+}
+
+/**
+ * Rectangle and circle live behind the toolbar's Shape flyout (STU-953) —
+ * opening it is now a prerequisite step before picking either one.
+ */
+async function pickShape(page: Page, name: 'Rectangle' | 'Circle') {
+  await page.getByRole('button', { name: 'Shape' }).click()
+  await page.getByRole('button', { name, exact: true }).click()
 }
 
 /**
@@ -37,7 +49,7 @@ function shapeSpot(page: Page) {
  */
 async function rectangle(page: Page, offsetY = 0) {
   const spot = shapeSpot(page)
-  await page.getByRole('button', { name: 'Rectangle' }).click()
+  await pickShape(page, 'Rectangle')
   await page
     .getByRole('region', { name: CANVAS })
     .click({ position: { x: spot.x, y: spot.y + offsetY } })

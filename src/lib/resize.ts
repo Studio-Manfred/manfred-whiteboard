@@ -17,6 +17,14 @@ export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 /** Clockwise from the top-left, which is also a sensible tab order. */
 export const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
 
+/**
+ * Which handles an element offers. Text derives its height from its content,
+ * so a vertical handle would be a control that looks live and does nothing.
+ */
+export function handlesFor(element: BoardElement): ResizeHandle[] {
+  return element.type === 'text' ? ['e', 'w'] : RESIZE_HANDLES
+}
+
 /** An element can never be dragged smaller than this, or inverted. */
 export const MIN_ELEMENT_SIZE = 40
 

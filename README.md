@@ -9,8 +9,9 @@ CRDTs. Local-first: every edit lands instantly and reconciles without conflicts.
 - **Infinite canvas** — pan and zoom from 10% to 500% over a dot grid, by pointer,
   spacebar-drag or keyboard.
 - **Board objects** — sticky notes with inline editing, rectangles and circles with retro
-  1-bit fill patterns (hatch, crosshatch, dots, checker, scanline), dynamic Bézier
-  connectors that re-anchor as their endpoints move, and a freehand pen.
+  1-bit fill patterns (hatch, crosshatch, dots, checker, scanline), bare text objects with
+  user-set width and auto-height, dynamic Bézier connectors that re-anchor as their
+  endpoints move, and a freehand pen.
 - **Multiplayer** — live cursors, presence badges and conflict-free sync over Yjs and
   `y-websocket`.
 - **Offline resilience** — `y-indexeddb` keeps the board through a lost connection.
@@ -71,8 +72,9 @@ Select something and a small bar floats beside it, carrying only the controls th
 
 | Selection | Controls |
 | --- | --- |
-| Sticky note | Fill, text size, font, alignment, stack order |
-| Shape | Fill, border colour, thickness, text size, font, alignment, stack order |
+| Sticky note | Fill, text colour, text size, font, alignment, stack order |
+| Shape | Fill, border colour, thickness, text colour, text size, font, alignment, stack order |
+| Text | Text colour, text size, font, alignment, stack order |
 | Arrow | Line colour, thickness, arrowheads — none, start, end or both |
 | Ink | Line colour, thickness |
 

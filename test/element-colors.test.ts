@@ -3,9 +3,11 @@ import {
   colorName,
   colorPatchFor,
   currentFillOf,
+  currentTextColorOf,
   supportsColorTarget,
   FILL_SWATCHES,
   BORDER_SWATCHES,
+  TEXT_SWATCHES,
   NO_FILL,
 } from '../src/lib/element-colors'
 import { PASTEL_COLORS, type BoardElement } from '../src/types/whiteboard'
@@ -129,6 +131,35 @@ describe('currentFillOf', () => {
   it('has nothing to report for ink or connectors', () => {
     expect(currentFillOf(element('drawing'))).toBeNull()
     expect(currentFillOf(element('connector'))).toBeNull()
+  })
+})
+
+describe('TEXT_SWATCHES', () => {
+  it('has no duplicates and names every swatch', () => {
+    expect(new Set(TEXT_SWATCHES).size).toBe(TEXT_SWATCHES.length)
+    TEXT_SWATCHES.forEach((swatch) => expect(colorName(swatch)).not.toContain('#'))
+  })
+})
+
+describe('currentTextColorOf', () => {
+  it('reads an explicit colour', () => {
+    const sticky = { ...element('sticky'), textColor: '#dc2626' } as BoardElement
+    expect(currentTextColorOf(sticky)).toBe('#dc2626')
+  })
+
+  it('falls back to slate-800 when unset, on every type that carries a label', () => {
+    // Not `undefined`: a mixed selection of a coloured and an uncoloured
+    // element must be comparable, the same trap `sharedValue` has for fill
+    // patterns (STU-925) — filtering `undefined` out would let the coloured
+    // element's value read as "shared" when it is not.
+    expect(currentTextColorOf(element('sticky'))).toBe('#1e293b')
+    expect(currentTextColorOf(element('shape'))).toBe('#1e293b')
+    expect(currentTextColorOf(element('text'))).toBe('#1e293b')
+  })
+
+  it('has nothing to report for ink or connectors', () => {
+    expect(currentTextColorOf(element('drawing'))).toBeNull()
+    expect(currentTextColorOf(element('connector'))).toBeNull()
   })
 })
 

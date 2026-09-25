@@ -10,6 +10,7 @@ import type {
   DrawingElement,
   ShapeElement,
   StickyElement,
+  TextElement,
 } from '../types/whiteboard'
 
 export interface BoardLayers {
@@ -17,14 +18,24 @@ export interface BoardLayers {
   shapes: ShapeElement[]
   connectors: ConnectorElement[]
   drawings: DrawingElement[]
+  texts: TextElement[]
 }
 
 /**
- * Splits the board into the four lists the canvas renders. Element types with
- * no layer of their own (frames) are skipped.
+ * Splits the board into the five lists the canvas renders. `frame` — the one
+ * dead `ElementType` with no layer of its own — opts out explicitly below;
+ * any other type left unhandled fails to compile against the `never` check,
+ * so a future element type can no longer be silently dropped the way `text`
+ * once was.
  */
 export function partitionElements(elements: ReadonlyMap<string, BoardElement>): BoardLayers {
-  const layers: BoardLayers = { stickies: [], shapes: [], connectors: [], drawings: [] }
+  const layers: BoardLayers = {
+    stickies: [],
+    shapes: [],
+    connectors: [],
+    drawings: [],
+    texts: [],
+  }
 
   elements.forEach((el) => {
     switch (el.type) {
@@ -40,6 +51,17 @@ export function partitionElements(elements: ReadonlyMap<string, BoardElement>): 
       case 'drawing':
         layers.drawings.push(el)
         break
+      case 'text':
+        layers.texts.push(el)
+        break
+      case 'frame':
+        // Dead type, still in the union: no layer, deliberately.
+        break
+      default: {
+        // A new ElementType must pick a layer or opt out above.
+        const unreachable: never = el
+        return unreachable
+      }
     }
   })
 
