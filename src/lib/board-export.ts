@@ -166,7 +166,7 @@ function stickySvg(el: StickyElement): string {
     (tspans
       ? `<text font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
         `font-size="${fontSize}" text-anchor="${textAnchorFor(align)}" ` +
-        `fill="#1e293b">${tspans}</text>`
+        `fill="${escapeXml(el.textColor ?? '#1e293b')}">${tspans}</text>`
       : '')
   )
 }
@@ -241,7 +241,7 @@ function shapeLabelSvg(el: ShapeElement): string {
     `<text x="${x}" y="${el.y + el.height / 2 + fontSize / 3}" ` +
     `text-anchor="${textAnchorFor(align)}" ${halo}` +
     `font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
-    `font-size="${fontSize}" fill="#1e293b">${escapeXml(el.text)}</text>`
+    `font-size="${fontSize}" fill="${escapeXml(el.textColor ?? '#1e293b')}">${escapeXml(el.text)}</text>`
   )
 }
 

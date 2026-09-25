@@ -644,6 +644,14 @@ export default function App() {
     [patchSelection]
   )
 
+  const handleTextColorChange = useCallback(
+    (textColor: string) =>
+      patchSelection((el) =>
+        supportsProperty(el, 'textColor') ? ({ textColor } as Partial<BoardElement>) : null
+      ),
+    [patchSelection]
+  )
+
   const handlePatternChange = useCallback(
     (pattern: FillPattern | undefined) =>
       patchSelection((el) =>
@@ -844,6 +852,7 @@ export default function App() {
           onStackChange={handleStackChange}
           onTextAlignChange={handleTextAlignChange}
           onPatternChange={handlePatternChange}
+          onTextColorChange={handleTextColorChange}
         />
       )}
       <ZoomControls viewport={viewport} onViewportChange={setViewport} />

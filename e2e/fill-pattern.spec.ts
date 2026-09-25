@@ -27,7 +27,10 @@ const patternDefId = (elementId: string) => `pattern-${elementId}`
  */
 function shapeSpot(page: Page) {
   const width = page.viewportSize()?.width ?? 1280
-  return { x: width >= 700 ? 420 : 200, y: 300 }
+  // The mobile offset grew with STU-953's text-colour control: an eighth
+  // trigger widens the bar, which shifts Fill (its leftmost control) further
+  // left too, so the old 200 no longer clears STU-927 on a narrow viewport.
+  return { x: width >= 700 ? 420 : 280, y: 300 }
 }
 
 /**

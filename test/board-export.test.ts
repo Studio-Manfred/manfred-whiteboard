@@ -306,6 +306,26 @@ describe('boardToSvg', () => {
     expect(right).toContain('<tspan x="184"')
   })
 
+  it("uses a note's textColor when set", () => {
+    const svg = boardToSvg(board({ ...sticky('a', 0, 0, 'Hello'), textColor: '#dc2626' }))
+    expect(svg).toContain('fill="#dc2626"')
+  })
+
+  it("falls back to slate-800 for a note's text when textColor is unset", () => {
+    const svg = boardToSvg(board(sticky('a', 0, 0, 'Hello')))
+    expect(svg).toContain('fill="#1e293b"')
+  })
+
+  it("escapes a note's textColor so it cannot inject markup", () => {
+    // textColor is shared data from Yjs, so a peer can write any string even
+    // if the UI only offers palette swatches — the same trap as text objects.
+    const malicious = '"><script>alert("xss")</script><x="'
+    const svg = boardToSvg(board({ ...sticky('a', 0, 0, 'Hello'), textColor: malicious }))
+
+    expect(svg).toMatch(/<text[^>]*fill="&quot;&gt;/)
+    expect(svg).not.toContain('<script>')
+  })
+
   it("exports a shape's label, centred by default", () => {
     const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery' }))
 
@@ -317,6 +337,26 @@ describe('boardToSvg', () => {
     const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery', textAlign: 'left' }))
 
     expect(svg).toContain('text-anchor="start"')
+  })
+
+  it("uses a shape's textColor when set", () => {
+    const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery', textColor: '#16a34a' }))
+    expect(svg).toContain('fill="#16a34a"')
+  })
+
+  it("falls back to slate-800 for a shape label when textColor is unset", () => {
+    const svg = boardToSvg(board({ ...shape('s'), text: 'Discovery' }))
+    expect(svg).toContain('fill="#1e293b"')
+  })
+
+  it("escapes a shape's textColor so it cannot inject markup", () => {
+    const malicious = '"><script>alert("xss")</script><x="'
+    const svg = boardToSvg(
+      board({ ...shape('s'), text: 'Discovery', textColor: malicious })
+    )
+
+    expect(svg).toMatch(/<text[^>]*fill="&quot;&gt;/)
+    expect(svg).not.toContain('<script>')
   })
 
   it('skips a connector whose endpoints are gone', () => {

@@ -21,6 +21,7 @@ export type StyleProperty =
   | 'stacking'
   | 'align'
   | 'pattern'
+  | 'textColor'
 
 export type Arrowheads = 'none' | 'start' | 'end' | 'both'
 
@@ -67,6 +68,10 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
     case 'pattern':
       // Only ShapeElement carries `pattern`, and only ShapeItem draws one.
       return element.type === 'shape'
+    case 'textColor':
+      // Every type with a label can recolour it; a connector's stroke and
+      // ink's stroke already have their own colour control instead.
+      return element.type === 'sticky' || element.type === 'shape' || element.type === 'text'
     default:
       return false
   }

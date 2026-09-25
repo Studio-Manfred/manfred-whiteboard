@@ -106,6 +106,16 @@ describe('supportsProperty', () => {
     expect(supportsProperty(frame, 'pattern')).toBe(false)
   })
 
+  it('offers a text colour to notes, shapes and text objects, not to connectors or ink', () => {
+    // A connector's stroke and ink's stroke already have their own colour
+    // control; neither has a separate label to recolour.
+    expect(supportsProperty(note, 'textColor')).toBe(true)
+    expect(supportsProperty(shape, 'textColor')).toBe(true)
+    expect(supportsProperty(text, 'textColor')).toBe(true)
+    expect(supportsProperty(arrow, 'textColor')).toBe(false)
+    expect(supportsProperty(ink, 'textColor')).toBe(false)
+  })
+
   it('offers text font and alignment controls', () => {
     expect(supportsProperty(text, 'font')).toBe(true)
     expect(supportsProperty(text, 'align')).toBe(true)
