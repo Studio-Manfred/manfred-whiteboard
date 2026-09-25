@@ -17,7 +17,7 @@ import {
   fontFamilyStack,
   textPaddingFor,
 } from './element-style'
-import { canvasMeasure, estimateMeasure, layoutText, LINE_HEIGHT } from './text-layout'
+import { canvasMeasure, layoutText, LINE_HEIGHT, type Measure } from './text-layout'
 import type { Rect } from './marquee'
 import type {
   TextAlign,
@@ -98,14 +98,15 @@ function wrapText(text: string, width: number, fontSize: number): string[] {
   })
 }
 
-let exportMeasure: ReturnType<typeof estimateMeasure> | ReturnType<typeof canvasMeasure> | undefined
+let exportMeasure: Measure | undefined
 
 /** The export runs in the browser, so it measures with the same real metrics
  * the canvas does. Created on first use: calling getContext at import time
- * makes jsdom noisy for every file that imports this module. */
+ * makes jsdom noisy for every file that imports this module. canvasMeasure
+ * already handles its own fallback to estimateMeasure when there is no canvas. */
 function measureForExport() {
   if (!exportMeasure) {
-    exportMeasure = typeof document === 'undefined' ? estimateMeasure() : canvasMeasure()
+    exportMeasure = canvasMeasure()
   }
   return exportMeasure
 }
@@ -139,7 +140,7 @@ function textSvg(el: TextElement): string {
   return (
     `<text font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
     `font-size="${el.fontSize}" text-anchor="${textAnchorFor(align)}" ` +
-    `fill="${el.textColor ?? '#1e293b'}">${tspans}</text>`
+    `fill="${escapeXml(el.textColor ?? '#1e293b')}">${tspans}</text>`
   )
 }
 

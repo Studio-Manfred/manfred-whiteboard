@@ -464,12 +464,37 @@ describe('boardToSvg, with text objects', () => {
     expect(countOf(svg, '<tspan')).toBe(lines.length)
   })
 
+  it('cuts a word too long for the line, which wrapText would not', () => {
+    // The guard against textSvg drifting back to its own wrapping. wrapText and
+    // estimateMeasure share the same 0.55 glyph ratio, so they agree on ordinary
+    // prose — an over-long word is where they part company, because only
+    // layoutText breaks mid-word.
+    const svg = boardToSvg(board(textEl({ text: 'A'.repeat(40), width: 120, fontSize: 20 })))
+
+    expect(countOf(svg, '<tspan')).toBeGreaterThan(1)
+  })
+
   it('uses textColor when set', () => {
     expect(boardToSvg(board(textEl({ textColor: '#dc2626' })))).toContain('fill="#dc2626"')
   })
 
   it('falls back to slate-800 when textColor is unset', () => {
     expect(boardToSvg(board(textEl()))).toContain('fill="#1e293b"')
+  })
+
+  it('escapes malicious content in textColor so it cannot inject markup', () => {
+    // textColor is shared data from Yjs, so a peer can write any string even if
+    // the UI only offers palette swatches. Unescaped interpolation could close
+    // the fill attribute and inject markup.
+    const malicious = '"><script>alert("xss")</script><x="'
+    const svg = boardToSvg(board(textEl({ textColor: malicious })))
+
+    // If the value were not escaped, it would close the fill attribute and inject
+    // a script tag. With proper escaping, the fill attribute closes correctly and
+    // the text renders normally, with no injected markup.
+    expect(svg).toMatch(/<text[^>]*fill="&quot;&gt;/)
+    expect(svg).toContain('</text>')
+    expect(svg).toContain('<tspan')
   })
 
   it('draws no box, no fill and no border around it', () => {
