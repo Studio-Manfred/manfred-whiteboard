@@ -139,6 +139,27 @@ describe('TextItem', () => {
     expect(screen.getByTestId('text-body')).toHaveTextContent('hello')
   })
 
+  it('deletes a never-committed blank object on Escape instead of just exiting edit mode', () => {
+    // Round 2 review, Important: the third ghost path. A brand-new object
+    // (committed text still '') has nothing to abandon *back to* — it exists
+    // only because the creating click made it, so Escape has to abandon the
+    // creation too, or it becomes a third way to leave a blank, invisible,
+    // hit-testable ghost on the board. This is the mirror of the test above:
+    // that one proves Escape restores and keeps an object with real
+    // committed text; this one proves it deletes one with none — whatever
+    // was typed in the meantime included, since none of it was ever
+    // committed either.
+    const onUpdate = vi.fn()
+    const blank: TextElement = { ...text, text: '' }
+    render(<TextItem element={blank} {...props} onUpdate={onUpdate} />)
+    // Mounts straight into edit mode: Round 1's fix for `text === ''`.
+    const box = screen.getByRole('textbox')
+    fireEvent.change(box, { target: { value: 'typed but never blurred' } })
+    fireEvent.keyDown(box, { key: 'Escape' })
+
+    expect(onUpdate).toHaveBeenCalledWith({ text: '' })
+  })
+
   it('recomputes layout when the font family changes, via an injected measurer', () => {
     // Round 1 review, Accepted (measurer injectability): jsdom's real canvas
     // is unavailable, so the default fallback (an average-glyph estimate)

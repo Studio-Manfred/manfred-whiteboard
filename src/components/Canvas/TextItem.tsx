@@ -127,6 +127,19 @@ export function TextItem({
   // exactly right and needs no handler.
   const abandon = () => {
     setIsEditing(false)
+    // An object with committed text has something to abandon *back to* —
+    // exit edit mode, discard the in-progress draft, keep the object exactly
+    // as it was. A brand-new object has no committed text to fall back on:
+    // it exists only because the creating click made it, so abandoning it
+    // has to abandon the creation too — otherwise Escape is a third way to
+    // leave a blank, invisible, hit-testable ghost on the board (Round 2
+    // review). Both branches route through `onUpdate`/no-op the same way
+    // `commit` does, so the parent's delete-on-blank rule stays the single
+    // place that decides.
+    if (element.text.trim() === '') {
+      onUpdate({ text: element.text })
+      return
+    }
     setDraft(element.text)
   }
 

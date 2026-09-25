@@ -190,24 +190,43 @@ describe('App', () => {
     expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
   })
 
-  it('deletes an empty text object reopened and blurred with nothing retyped', async () => {
-    // Round 1 review, Important: even reaching `commit`, `if (draft !==
-    // element.text)` let an unchanged-and-blank draft through — Escape
-    // abandons without deleting (matching StickyNote), so the object is
-    // still there, still empty, to reopen and blur a second time.
+  it('removes a freshly placed text object when Escape is pressed before typing anything', async () => {
+    // Round 2 review, Important: the third ghost path. abandon() used to
+    // only exit edit mode and restore the draft, so pressing Escape right
+    // after creation left a blank, invisible, hit-testable object behind —
+    // reached by the exact key a user presses precisely when they want out.
+    // A brand-new object has no committed text to restore *to*, so
+    // abandoning it now abandons the creation too.
     render(<App />)
 
     pickTool('Text')
     clickCanvasAt(200, 160)
 
     fireEvent.keyDown(await screen.findByRole('textbox'), { key: 'Escape' })
-    const el = screen.getByTestId(TEXT_OBJECT)
-    expect(el).toBeInTheDocument()
-
-    fireEvent.doubleClick(el)
-    fireEvent.blur(screen.getByRole('textbox'))
 
     expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
+  })
+
+  it('keeps an existing text object and its text unchanged when Escape is pressed after editing', async () => {
+    // Round 2 review — the regression guard: an object that already has
+    // committed text keeps exactly today's behaviour on Escape (discard the
+    // in-progress draft, keep the object), so a future reader cannot
+    // "simplify" the fix above into deleting on every Escape.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+    const box = await screen.findByRole('textbox')
+    fireEvent.change(box, { target: { value: 'first draft' } })
+    fireEvent.blur(box)
+
+    const el = screen.getByTestId(TEXT_OBJECT)
+    fireEvent.doubleClick(el)
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'a different draft' } })
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' })
+
+    expect(screen.getByTestId(TEXT_OBJECT)).toBeInTheDocument()
+    expect(screen.getByTestId('text-line')).toHaveTextContent('first draft')
   })
 
   it('deletes the selected element with the Delete key', () => {
