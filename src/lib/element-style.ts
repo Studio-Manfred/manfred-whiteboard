@@ -57,7 +57,7 @@ export function supportsProperty(element: BoardElement, property: StyleProperty)
       return element.type === 'connector' || element.type === 'drawing'
     case 'font':
     case 'align':
-      return element.type === 'sticky' || element.type === 'shape'
+      return element.type === 'sticky' || element.type === 'shape' || element.type === 'text'
     case 'arrowheads':
       return element.type === 'connector'
     case 'stacking':
@@ -98,18 +98,21 @@ export const TEXT_ALIGNS: ReadonlyArray<{ value: TextAlign; label: string }> = [
 ]
 
 /** Base inset between an element's edge and its text. */
-export const TEXT_PADDING = { sticky: 16, shape: 12 } as const
+export const TEXT_PADDING = { sticky: 16, shape: 12, text: 0 } as const
 
 /**
  * How far text sits from an element's edge.
  *
  * A shape's stroke is drawn centred on its bounds, so half of it falls inside:
  * a thick border would otherwise crowd the label against the edge. The inset
- * grows with the border instead.
+ * grows with the border instead. A bare text object has no border to lean on,
+ * so padding would only push words away from bounds nobody can see and make
+ * the selection outline sit wide of the text.
  */
 export function textPaddingFor(element: BoardElement): number | null {
   if (element.type === 'sticky') return TEXT_PADDING.sticky
   if (element.type === 'shape') return TEXT_PADDING.shape + (element.strokeWidth ?? 2) / 2
+  if (element.type === 'text') return TEXT_PADDING.text
   return null
 }
 

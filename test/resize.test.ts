@@ -6,11 +6,22 @@ import {
   resizeRect,
   cursorForHandle,
   handleAnchorPoint,
+  handlesFor,
 } from '../src/lib/resize'
 import type { Rect } from '../src/lib/marquee'
 import type { BoardElement } from '../src/types/whiteboard'
 
 const base: Rect = { x: 100, y: 100, width: 200, height: 100 }
+
+const textElement = {
+  id: 't', type: 'text', zIndex: 1, createdAt: 0, updatedAt: 0,
+  text: 'hi', fontSize: 16, ...base,
+} as BoardElement
+
+const stickyElement = {
+  id: 'n', type: 'sticky', zIndex: 1, createdAt: 0, updatedAt: 0,
+  text: '', color: '#FFF9B1', fontSize: 16, ...base,
+} as BoardElement
 
 describe('resizeRect', () => {
   it('grows to the right from the east edge, leaving the left alone', () => {
@@ -138,6 +149,21 @@ describe('the handles themselves', () => {
     expect(handleAnchorPoint('n')).toEqual({ x: 0.5, y: 0 })
     expect(handleAnchorPoint('se')).toEqual({ x: 1, y: 1 })
     expect(handleAnchorPoint('w')).toEqual({ x: 0, y: 0.5 })
+  })
+
+  it('offers text only the horizontal handles', () => {
+    expect(handlesFor(textElement)).toEqual(['e', 'w'])
+  })
+
+  it('offers every other element all eight', () => {
+    expect(handlesFor(stickyElement)).toHaveLength(8)
+  })
+
+  it('never resizes text below the minimum width', () => {
+    // The spec clamps to MIN_ELEMENT_SIZE; resizeRect already does, but nothing
+    // asserted it held for an element whose height is not user-controlled.
+    const next = resizeRect(textElement, 'w', { x: 10_000, y: 0 })
+    expect(next.width).toBeGreaterThanOrEqual(MIN_ELEMENT_SIZE)
   })
 })
 

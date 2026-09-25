@@ -14,7 +14,7 @@ import {
   sharedValue,
   supportsProperty,
 } from '../src/lib/element-style'
-import type { BoardElement, ConnectorElement, ShapeElement, StickyElement } from '../src/types/whiteboard'
+import type { BoardElement, ConnectorElement, ShapeElement, StickyElement, TextElement } from '../src/types/whiteboard'
 
 const note = {
   id: 'n', type: 'sticky', x: 0, y: 0, width: 200, height: 200, zIndex: 1,
@@ -42,6 +42,11 @@ const frame = {
   id: 'f', type: 'frame', x: 0, y: 0, width: 400, height: 300, zIndex: 1,
   title: 'Frame', fillColor: '#ffffff', createdAt: 0, updatedAt: 0,
 } as BoardElement
+
+const text = {
+  id: 't', type: 'text', x: 0, y: 0, width: 240, height: 22, zIndex: 1,
+  text: 'hi', fontSize: 16, createdAt: 0, updatedAt: 0,
+} as TextElement
 
 describe('supportsProperty', () => {
   it('offers fill to notes and shapes only', () => {
@@ -99,6 +104,21 @@ describe('supportsProperty', () => {
     expect(supportsProperty(arrow, 'pattern')).toBe(false)
     expect(supportsProperty(ink, 'pattern')).toBe(false)
     expect(supportsProperty(frame, 'pattern')).toBe(false)
+  })
+
+  it('offers text font and alignment controls', () => {
+    expect(supportsProperty(text, 'font')).toBe(true)
+    expect(supportsProperty(text, 'align')).toBe(true)
+  })
+
+  it('withholds fill, border, stroke, thickness and pattern from text', () => {
+    // A bare text object has no fillable body, no border, and no stroke to
+    // thicken — nothing later should quietly turn one of these on for it.
+    expect(supportsProperty(text, 'fill')).toBe(false)
+    expect(supportsProperty(text, 'border')).toBe(false)
+    expect(supportsProperty(text, 'stroke')).toBe(false)
+    expect(supportsProperty(text, 'thickness')).toBe(false)
+    expect(supportsProperty(text, 'pattern')).toBe(false)
   })
 })
 
@@ -227,6 +247,10 @@ describe('textPaddingFor', () => {
   it('has nothing to say about elements without text', () => {
     expect(textPaddingFor(arrow)).toBeNull()
     expect(textPaddingFor(ink)).toBeNull()
+  })
+
+  it('gives a bare text object no padding — it has no border to lean on', () => {
+    expect(textPaddingFor(text)).toBe(0)
   })
 })
 
