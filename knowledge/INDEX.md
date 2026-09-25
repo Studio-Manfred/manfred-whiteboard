@@ -18,6 +18,9 @@ base at `my-process/docs/knowledge/`.
 - [docs/bootstrap/stack-and-conventions.md](../docs/bootstrap/stack-and-conventions.md) — Stack conventions (Vite, React 19, TypeScript, Tailwind 4, Vitest, Playwright, Vercel).
 - [docs/bootstrap/superpowers-workflow.md](../docs/bootstrap/superpowers-workflow.md) — Superpowers workflow (brainstorming, writing-plans, TDD, subagents).
 - [docs/bootstrap/knowledge/procedural.md](../docs/bootstrap/knowledge/procedural.md) — Deploy steps, package tokens, CI/CD access.
+- [subagent-review.md](subagent-review.md) — what STU-953 taught about running a plan
+  through subagents: why a plan is a hypothesis, how to tell a guard from decoration, and
+  the bug classes jsdom cannot see.
 
 ### Audit & status
 <!-- Read-only audits, prioritised findings, remediation order. -->
