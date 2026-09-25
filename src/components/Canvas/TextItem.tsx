@@ -44,7 +44,14 @@ export function TextItem({
   isDragging = false,
   measure,
 }: TextItemProps) {
-  const [isEditing, setIsEditing] = useState(false)
+  // A freshly created object is always empty text, and empty text is always
+  // deleted on blur (see `commit` below) — so the only way an element with
+  // `text === ''` can exist is if it was *just* created and never blurred
+  // yet. Starting it in edit mode means the user who picked Text and clicked
+  // the canvas can type immediately, with no double-click needed, and it
+  // means a change of heart (blur with nothing typed) actually reaches
+  // `commit` instead of never entering edit at all and leaving a ghost.
+  const [isEditing, setIsEditing] = useState(element.text === '')
   const [draft, setDraft] = useState(element.text)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const activeMeasure = measure ?? defaultMeasure()
@@ -52,7 +59,17 @@ export function TextItem({
   useEffect(() => setDraft(element.text), [element.text])
 
   useEffect(() => {
-    if (isEditing) inputRef.current?.focus()
+    if (!isEditing) return
+    // Deferred a tick: entering edit mode straight from creation runs this
+    // effect inside the very same `pointerdown` that made the element. That
+    // event's own default action — refocusing the canvas region, which is
+    // keyboard-focusable for WCAG 2.1.1 arrow-key panning — fires *after*
+    // listeners finish, so it would steal focus back from the textarea we
+    // just focused and fire a spurious blur, deleting the object before the
+    // click even finishes. Waiting a tick lets that default action resolve
+    // first, so our focus is the one that sticks.
+    const id = setTimeout(() => inputRef.current?.focus(), 0)
+    return () => clearTimeout(id)
   }, [isEditing])
 
   // An explicit options literal, rather than passing `element` itself: the
@@ -98,7 +115,10 @@ export function TextItem({
 
   const commit = () => {
     setIsEditing(false)
-    if (draft !== element.text) onUpdate({ text: draft })
+    // Blank text always has to reach the parent, even when it was already
+    // blank and nothing was typed — that is the only signal that turns a
+    // never-edited placeholder into a delete rather than a silent ghost.
+    if (draft.trim() === '' || draft !== element.text) onUpdate({ text: draft })
   }
 
   // Escape abandons the edit — matching StickyNote, and what a person

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import * as Y from 'yjs'
 import { createWhiteboardDoc } from '../src/types/whiteboard'
 import { patternIdFor, patternLabel } from '../src/lib/fill-patterns'
@@ -161,16 +161,51 @@ describe('App', () => {
     // Review Focus 1: an invisible object nobody can select is a trap. Empty
     // text — and whitespace-only text, which is invisible but not '' — both
     // delete the element rather than leaving a zero-height ghost on the board.
+    // Creation opens straight into edit mode (Round 1 review fix), so there
+    // is no text-body to double-click into first.
     render(<App />)
 
     pickTool('Text')
     clickCanvasAt(200, 160)
 
-    const el = await screen.findByTestId(TEXT_OBJECT)
-    fireEvent.doubleClick(within(el).getByTestId('text-body'))
-    const box = screen.getByRole('textbox')
+    const box = await screen.findByRole('textbox')
     fireEvent.change(box, { target: { value: '   ' } })
     fireEvent.blur(box)
+
+    expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
+  })
+
+  it('deletes a freshly placed text object if nothing is typed before clicking away', async () => {
+    // Round 1 review, Important: creation used to never enter edit mode, so
+    // a change of heart right after placing one never reached `commit` at
+    // all — this is the most likely flow of all to hit the ghost.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    const box = await screen.findByRole('textbox')
+    fireEvent.blur(box)
+
+    expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
+  })
+
+  it('deletes an empty text object reopened and blurred with nothing retyped', async () => {
+    // Round 1 review, Important: even reaching `commit`, `if (draft !==
+    // element.text)` let an unchanged-and-blank draft through — Escape
+    // abandons without deleting (matching StickyNote), so the object is
+    // still there, still empty, to reopen and blur a second time.
+    render(<App />)
+
+    pickTool('Text')
+    clickCanvasAt(200, 160)
+
+    fireEvent.keyDown(await screen.findByRole('textbox'), { key: 'Escape' })
+    const el = screen.getByTestId(TEXT_OBJECT)
+    expect(el).toBeInTheDocument()
+
+    fireEvent.doubleClick(el)
+    fireEvent.blur(screen.getByRole('textbox'))
 
     expect(screen.queryByTestId(TEXT_OBJECT)).not.toBeInTheDocument()
   })
