@@ -141,7 +141,9 @@ function ShapeGroup({
                 title={`${label} (${shortcut})`}
                 onClick={() => {
                   onToolChange(tool)
-                  setIsOpen(false)
+                  // Same destination as Escape: picking a shape shouldn't
+                  // drop focus to <body> when the button it was on unmounts.
+                  close()
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {

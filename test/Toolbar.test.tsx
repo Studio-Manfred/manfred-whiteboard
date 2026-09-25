@@ -133,6 +133,21 @@ describe('the shape group', () => {
     expect(screen.queryByRole('button', { name: 'Circle' })).not.toBeInTheDocument()
   })
 
+  it('returns focus to the Shape trigger after picking a shape by keyboard', () => {
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
+    const group = screen.getByRole('button', { name: 'Shape' })
+    fireEvent.click(group)
+    const rectangle = screen.getByRole('button', { name: 'Rectangle' })
+    // Opening already landed real DOM focus here — this is the keyboard
+    // user's actual position (tabbed/arrowed in), not just a locator.
+    expect(rectangle).toHaveFocus()
+
+    fireEvent.click(rectangle)
+
+    expect(screen.queryByRole('button', { name: 'Rectangle' })).not.toBeInTheDocument()
+    expect(group).toHaveFocus()
+  })
+
   it('marks the group active while either shape is the tool', () => {
     const { rerender } = render(<Toolbar activeTool="circle" onToolChange={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Shape' })).toHaveAttribute('aria-pressed', 'true')
