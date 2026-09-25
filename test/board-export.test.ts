@@ -7,7 +7,9 @@ import type {
   DrawingElement,
   ShapeElement,
   StickyElement,
+  TextElement,
 } from '../src/types/whiteboard'
+import { layoutText, estimateMeasure } from '../src/lib/text-layout'
 
 function sticky(id: string, x = 0, y = 0, text = ''): StickyElement {
   return {
@@ -110,6 +112,23 @@ function connector(id: string, fromId: string, toId: string): ConnectorElement {
     style: 'curved',
     createdAt: 0,
     updatedAt: 0,
+  }
+}
+
+function textEl(over: Partial<TextElement> = {}): TextElement {
+  return {
+    id: 't1',
+    type: 'text',
+    x: 10,
+    y: 20,
+    width: 200,
+    height: 54,
+    zIndex: 1,
+    createdAt: 0,
+    updatedAt: 0,
+    text: 'hello world',
+    fontSize: 20,
+    ...over,
   }
 }
 
@@ -420,6 +439,47 @@ describe('boardToSvg, with fill patterns', () => {
 
     expect(svg).toContain(`id="${patternIdFor('s')}"`)
     expect(svg).not.toContain('fill=""')
+  })
+})
+
+describe('boardToSvg, with text objects', () => {
+  it('emits one tspan per laid-out line', () => {
+    const el = textEl()
+    const expected = layoutText(el.text, el.width, el, estimateMeasure()).lines
+    const svg = boardToSvg(board(el))
+
+    expect(countOf(svg, '<tspan')).toBe(expected.length)
+  })
+
+  it('breaks exactly where the canvas breaks', () => {
+    // The whole point of the design: one module, one measurer, so the
+    // exported line breaks cannot drift from the ones on screen.
+    const el = textEl({ text: 'the quick brown fox jumps', width: 120 })
+    const measure = estimateMeasure()
+    const { lines } = layoutText(el.text, el.width, el, measure)
+    const svg = boardToSvg(board(el))
+
+    // Plain words, so no XML escaping is involved — assert them directly.
+    for (const line of lines) expect(svg).toContain(`>${line}</tspan>`)
+    expect(countOf(svg, '<tspan')).toBe(lines.length)
+  })
+
+  it('uses textColor when set', () => {
+    expect(boardToSvg(board(textEl({ textColor: '#dc2626' })))).toContain('fill="#dc2626"')
+  })
+
+  it('falls back to slate-800 when textColor is unset', () => {
+    expect(boardToSvg(board(textEl()))).toContain('fill="#1e293b"')
+  })
+
+  it('draws no box, no fill and no border around it', () => {
+    const svg = withoutDefs(boardToSvg(board(textEl())))
+    // Only the page background rect; a text object paints nothing but words.
+    expect(countOf(svg, '<rect')).toBe(1)
+  })
+
+  it('emits nothing for an empty text object', () => {
+    expect(boardToSvg(board(textEl({ text: '' })))).not.toContain('<tspan')
   })
 })
 

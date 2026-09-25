@@ -17,7 +17,7 @@ import {
   fontFamilyStack,
   textPaddingFor,
 } from './element-style'
-import { LINE_HEIGHT } from './text-layout'
+import { canvasMeasure, estimateMeasure, layoutText, LINE_HEIGHT } from './text-layout'
 import type { Rect } from './marquee'
 import type {
   TextAlign,
@@ -26,6 +26,7 @@ import type {
   DrawingElement,
   ShapeElement,
   StickyElement,
+  TextElement,
 } from '../types/whiteboard'
 
 /** Breathing room around the outermost elements. */
@@ -97,6 +98,18 @@ function wrapText(text: string, width: number, fontSize: number): string[] {
   })
 }
 
+let exportMeasure: ReturnType<typeof estimateMeasure> | ReturnType<typeof canvasMeasure> | undefined
+
+/** The export runs in the browser, so it measures with the same real metrics
+ * the canvas does. Created on first use: calling getContext at import time
+ * makes jsdom noisy for every file that imports this module. */
+function measureForExport() {
+  if (!exportMeasure) {
+    exportMeasure = typeof document === 'undefined' ? estimateMeasure() : canvasMeasure()
+  }
+  return exportMeasure
+}
+
 /** SVG has no text alignment: the anchor and the x both have to move. */
 function textAnchorFor(align: TextAlign): string {
   if (align === 'center') return 'middle'
@@ -108,6 +121,26 @@ function textXFor(align: TextAlign, left: number, width: number, padding: number
   if (align === 'center') return left + width / 2
   if (align === 'right') return left + width - padding
   return left + padding
+}
+
+/** Bare words: no card, no border, one tspan per laid-out line. */
+function textSvg(el: TextElement): string {
+  const { lines } = layoutText(el.text, el.width, el, measureForExport())
+  if (lines.length === 0) return ''
+
+  const align = effectiveTextAlign(el) ?? 'left'
+  const x = textXFor(align, el.x, el.width, 0)
+  const lineHeight = el.fontSize * LINE_HEIGHT
+
+  const tspans = lines
+    .map((line, i) => `<tspan x="${x}" y="${el.y + el.fontSize + i * lineHeight}">${escapeXml(line)}</tspan>`)
+    .join('')
+
+  return (
+    `<text font-family="${escapeXml(fontFamilyStack(el.fontFamily))}" ` +
+    `font-size="${el.fontSize}" text-anchor="${textAnchorFor(align)}" ` +
+    `fill="${el.textColor ?? '#1e293b'}">${tspans}</text>`
+  )
 }
 
 function stickySvg(el: StickyElement): string {
@@ -260,6 +293,8 @@ function elementSvg(el: BoardElement, elements: ReadonlyMap<string, BoardElement
       return drawingSvg(el)
     case 'connector':
       return connectorSvg(el, elements)
+    case 'text':
+      return textSvg(el)
     default:
       return ''
   }
