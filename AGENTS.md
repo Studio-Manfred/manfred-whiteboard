@@ -78,6 +78,21 @@ dispatches; most of the avoidable cost was in the briefs, not the work.
   The "caught" column is the point: it is the only way to learn which roles earn
   their cost. Note what was worn rather than dispatched too, since wearing a hat
   does not change the model and dispatching does.
+- **Scan for ownership before Task 1.** List every file the feature will touch and
+  confirm some task names it. STU-953's plan left `board-selectors.ts` unowned; it
+  switches on element type with no `default`, so the new type was silently dropped
+  and three tasks would have passed green with the feature rendering nothing.
+  Typecheck cannot catch this — a missing `default` means no exhaustiveness to fail.
+- **A test guarding a named risk is not a guard until it has been watched to fail.**
+  Make the bug, run the test, restore in the next tool call. Three STU-953 tests were
+  proven unable to fail; all three were covered lines, so coverage said nothing.
+- **Anything touching focus, pointer events, visibility or text measurement gets a
+  real-browser check, by the implementer.** jsdom dispatches no native default
+  actions and does no layout, so it cannot see that class of bug at all. Both of
+  STU-953's worst findings were caught exactly this way.
+- **Check `git status` after every review dispatch.** Reviewers mutate source to test
+  their own findings; one was killed mid-mutation and left the bug in the tree.
+- See `knowledge/subagent-review.md` for the full account.
 - **Do not optimise away mutation-verification.** A tester that proves its
   assertions bite — by building a throwaway implementation and deliberately
   breaking it — is the most expensive practice here and the highest-value one.

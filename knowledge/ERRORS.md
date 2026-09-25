@@ -297,3 +297,18 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
 - **Graduated to:** not yet — this is a procedural issue specific to mutation-testing
   reviews, not a bug in the codebase.
 
+
+## 2026-09-25 — `vercel deploy --prod` returned "Not authorized" once, then succeeded
+
+`vercel deploy --prod` (CLI 59.5.0) failed the first attempt with
+`{"status":"error","reason":"deploy_failed","message":"Not authorized"}`, and
+the same command succeeded on an immediate retry. Nothing was changed between
+the two attempts — no re-auth, no token refresh, no settings touched.
+
+**Logged without a conclusion.** This is an infrastructure error, and one
+occurrence is not a pattern. If it recurs, the things to check first are
+whether the CLI's cached credentials expire mid-session and whether the
+GitHub integration's own auto-deploy (which had already fired 27s after the
+merge) contends with an explicit CLI deploy for the same production alias.
+
+Context: STU-953's release. Production ended up healthy and correctly aliased.
