@@ -31,13 +31,22 @@ function shapeSpot(page: Page) {
 }
 
 /**
+ * Rectangle and circle live behind the toolbar's Shape flyout (STU-953) —
+ * opening it is now a prerequisite step before picking either one.
+ */
+async function pickShape(page: Page, name: 'Rectangle' | 'Circle') {
+  await page.getByRole('button', { name: 'Shape' }).click()
+  await page.getByRole('button', { name, exact: true }).click()
+}
+
+/**
  * Draws a rectangle, which lands selected with its properties bar showing.
  * The locator is pinned to the new shape's own id, so it keeps pointing at
  * that shape once another is drawn on top of it.
  */
 async function rectangle(page: Page, offsetY = 0) {
   const spot = shapeSpot(page)
-  await page.getByRole('button', { name: 'Rectangle' }).click()
+  await pickShape(page, 'Rectangle')
   await page
     .getByRole('region', { name: CANVAS })
     .click({ position: { x: spot.x, y: spot.y + offsetY } })

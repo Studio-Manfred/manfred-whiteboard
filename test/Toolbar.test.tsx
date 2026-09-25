@@ -75,9 +75,12 @@ describe('Toolbar', () => {
     const onToolChange = vi.fn()
     render(<Toolbar activeTool="select" onToolChange={onToolChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rectangle' }))
+    // Rectangle/Circle moved behind the Shape flyout (see "the shape group"
+    // below) — this checks plain click-to-select on a tool that is still a
+    // direct toolbar button.
+    fireEvent.click(screen.getByRole('button', { name: 'Sticky note' }))
 
-    expect(onToolChange).toHaveBeenCalledWith('rectangle')
+    expect(onToolChange).toHaveBeenCalledWith('sticky')
   })
 
   it('does not change the tool merely by moving focus', () => {
@@ -102,4 +105,50 @@ describe('Toolbar', () => {
     expect(tabbable[0]).toHaveAccessibleName('Pen')
   })
 
+})
+
+describe('the shape group', () => {
+  it('shows one Shape button rather than two shape tools', () => {
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Shape' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Rectangle' })).not.toBeInTheDocument()
+  })
+
+  it('opens a flyout holding both shapes', () => {
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }))
+
+    expect(screen.getByRole('button', { name: 'Rectangle' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Circle' })).toBeInTheDocument()
+  })
+
+  it('picks the tool and closes the flyout', () => {
+    const onToolChange = vi.fn()
+    render(<Toolbar activeTool="select" onToolChange={onToolChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
+
+    expect(onToolChange).toHaveBeenCalledWith('circle')
+    expect(screen.queryByRole('button', { name: 'Circle' })).not.toBeInTheDocument()
+  })
+
+  it('marks the group active while either shape is the tool', () => {
+    render(<Toolbar activeTool="circle" onToolChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Shape' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('closes the flyout on Escape and returns focus to the group', () => {
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
+    const group = screen.getByRole('button', { name: 'Shape' })
+    fireEvent.click(group)
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Rectangle' }), { key: 'Escape' })
+
+    expect(screen.queryByRole('button', { name: 'Rectangle' })).not.toBeInTheDocument()
+    expect(group).toHaveFocus()
+  })
+
+  it('still offers the text tool', () => {
+    render(<Toolbar activeTool="select" onToolChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument()
+  })
 })

@@ -60,7 +60,14 @@ function canvas() {
   return screen.getByRole('region', { name: CANVAS })
 }
 
+// Rectangle/Circle live behind the toolbar's Shape flyout (STU-953) — opening
+// it first keeps every existing `pickTool('Rectangle')` call working.
+const SHAPE_TOOLS = ['Rectangle', 'Circle']
+
 function pickTool(name: string) {
+  if (SHAPE_TOOLS.includes(name)) {
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }))
+  }
   fireEvent.click(screen.getByRole('button', { name }))
 }
 
@@ -113,11 +120,11 @@ describe('App', () => {
   it('selects tools by keyboard shortcut', () => {
     render(<App />)
 
+    // Rectangle sits behind the closed Shape flyout, which doesn't
+    // auto-open on a shortcut — the group button reflects the active tool
+    // instead (see "the shape group" in Toolbar.test.tsx).
     fireEvent.keyDown(window, { key: 'r' })
-    expect(screen.getByRole('button', { name: 'Rectangle' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    )
+    expect(screen.getByRole('button', { name: 'Shape' })).toHaveAttribute('aria-pressed', 'true')
 
     fireEvent.keyDown(window, { key: 'v' })
     expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute(
