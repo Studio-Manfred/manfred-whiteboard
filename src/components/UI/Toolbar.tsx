@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { CanvasTool } from '../Canvas/CanvasViewport'
 import {
   MousePointer2,
@@ -19,11 +19,12 @@ interface ToolbarProps {
 }
 
 // Rectangle and circle collapse behind a Shape flyout — at 393px the toolbar
-// has no room for a ninth 42px touch target (see docs/context/STU-953.md).
-const SHAPE_TOOLS: Array<{ tool: CanvasTool; icon: React.ElementType; label: string }> = [
-  { tool: 'rectangle', icon: Square, label: 'Rectangle' },
-  { tool: 'circle', icon: Circle, label: 'Circle' },
-]
+// has no room for a ninth 40px button (see docs/context/STU-953.md).
+const SHAPE_TOOLS: Array<{ tool: CanvasTool; icon: React.ElementType; label: string; shortcut: string }> =
+  [
+    { tool: 'rectangle', icon: Square, label: 'Rectangle', shortcut: 'R' },
+    { tool: 'circle', icon: Circle, label: 'Circle', shortcut: 'C' },
+  ]
 
 const TOOLS: Array<{ tool: CanvasTool; icon: React.ElementType; label: string; shortcut?: string }> =
   [
@@ -63,7 +64,14 @@ function ShapeGroup({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const groupRef = useRef<HTMLButtonElement>(null)
+  const flyoutRefs = useRef<Array<HTMLButtonElement | null>>([])
   const isActive = SHAPE_TOOLS.some(({ tool }) => tool === activeTool)
+
+  // Opening hands focus straight to the first shape, so trigger -> flyout ->
+  // back out is one coherent round trip instead of a popup nobody lands in.
+  useEffect(() => {
+    if (isOpen) flyoutRefs.current[0]?.focus()
+  }, [isOpen])
 
   // Escape closes and hands focus back, so the flyout is never a keyboard trap.
   const close = () => {
@@ -72,35 +80,18 @@ function ShapeGroup({
   }
 
   return (
-    <div className="relative">
-      {isOpen && (
-        <div
-          role="group"
-          aria-label="Shapes"
-          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 flex gap-1
-                     rounded-xl bg-white p-1 shadow-lg ring-1 ring-slate-200"
-        >
-          {SHAPE_TOOLS.map(({ tool, icon: Icon, label }) => (
-            <button
-              key={tool}
-              type="button"
-              aria-label={label}
-              aria-pressed={activeTool === tool}
-              onClick={() => {
-                onToolChange(tool)
-                setIsOpen(false)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') close()
-              }}
-              className="w-10 h-10 grid place-items-center rounded-lg hover:bg-slate-100"
-            >
-              <Icon className="w-5 h-5" aria-hidden="true" />
-            </button>
-          ))}
-        </div>
-      )}
-
+    <div
+      className="relative"
+      onBlur={(e) => {
+        // Focus landed outside both the trigger and the flyout — an open
+        // popup with focus elsewhere is orphaned, so close it. Moving focus
+        // between the trigger and its own flyout items (still inside this
+        // wrapper) must not trip this.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setIsOpen(false)
+        }
+      }}
+    >
       <button
         ref={(el) => {
           groupRef.current = el
@@ -109,7 +100,6 @@ function ShapeGroup({
         type="button"
         aria-label="Shape"
         aria-pressed={isActive}
-        aria-haspopup="true"
         aria-expanded={isOpen}
         tabIndex={tabIndex}
         onClick={() => setIsOpen((open) => !open)}
@@ -120,12 +110,64 @@ function ShapeGroup({
           }
           onArrowKeyDown(e)
         }}
-        className={`w-[42px] h-[42px] grid place-items-center rounded-xl transition-colors ${
+        className={`w-10 h-10 grid place-items-center rounded-xl transition-colors ${
           isActive ? 'bg-blue-500 text-white' : 'text-slate-600 hover:bg-slate-100'
         }`}
       >
         <Shapes className="w-5 h-5" aria-hidden="true" />
       </button>
+
+      {/* Rendered after the trigger, so DOM order (Tab order) agrees with the
+          visual order an `absolute bottom-full` popup only fakes upward. */}
+      {isOpen && (
+        <div
+          role="group"
+          aria-label="Shapes"
+          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 flex gap-1
+                     rounded-xl bg-white p-1 shadow-lg ring-1 ring-slate-200"
+        >
+          {SHAPE_TOOLS.map(({ tool, icon: Icon, label, shortcut }, index) => {
+            const isItemActive = activeTool === tool
+
+            return (
+              <button
+                key={tool}
+                ref={(el) => {
+                  flyoutRefs.current[index] = el
+                }}
+                type="button"
+                aria-label={label}
+                aria-pressed={isItemActive}
+                title={`${label} (${shortcut})`}
+                onClick={() => {
+                  onToolChange(tool)
+                  setIsOpen(false)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    close()
+                    return
+                  }
+                  // A self-contained 2-item roving group: Left/Right wrap
+                  // between the shapes rather than bleeding into the parent
+                  // toolbar's own arrow-key handling.
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    e.preventDefault()
+                    const delta = e.key === 'ArrowRight' ? 1 : -1
+                    const next = (index + delta + SHAPE_TOOLS.length) % SHAPE_TOOLS.length
+                    flyoutRefs.current[next]?.focus()
+                  }
+                }}
+                className={`w-10 h-10 grid place-items-center rounded-lg ${
+                  isItemActive ? 'bg-blue-500 text-white' : 'hover:bg-slate-100'
+                }`}
+              >
+                <Icon className="w-5 h-5" aria-hidden="true" />
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
