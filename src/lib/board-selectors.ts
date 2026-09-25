@@ -40,6 +40,10 @@ export function partitionElements(elements: ReadonlyMap<string, BoardElement>): 
       case 'drawing':
         layers.drawings.push(el)
         break
+      // TODO(STU-953): placeholder until Task 6 gives text a layer — see docs/context/STU-953.md
+      // Text has no BoardLayers array yet, so it is dropped here and never
+      // reaches the canvas. There is no `default` clause, so nothing will
+      // typecheck-fail to remind us.
     }
   })
 
