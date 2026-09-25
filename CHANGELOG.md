@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- A briefing convention for dispatched roles: one `docs/context/STU-NNN.md` per ticket
+  holding the approved design, the contract agents code against, verified repo facts and
+  an append-only Traps section, so a brief points at one reviewed source instead of
+  restating it five times (STU-952).
+
 - Fill patterns for shapes — five retro 1-bit mono patterns (`hatch`, `crosshatch`, `dots`,
   `checker`, `scanline`) drawn in the shape's border colour over its fill colour. Geometry
   tested in `src/lib/fill-patterns.ts` and feeds both canvas and export renderers. Picker
