@@ -17,6 +17,7 @@ import {
   fontFamilyStack,
   textPaddingFor,
 } from './element-style'
+import { LINE_HEIGHT } from './text-layout'
 import type { Rect } from './marquee'
 import type {
   TextAlign,
@@ -30,7 +31,6 @@ import type {
 /** Breathing room around the outermost elements. */
 export const EXPORT_PADDING = 40
 const EMPTY_BOARD = { width: 640, height: 480 }
-const LINE_HEIGHT = 1.35
 /** Rough average glyph width relative to font size — enough to wrap sensibly. */
 const GLYPH_RATIO = 0.55
 
