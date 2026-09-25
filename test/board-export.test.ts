@@ -546,6 +546,16 @@ describe('boardToSvg, with text objects', () => {
   it('emits nothing for an empty text object', () => {
     expect(boardToSvg(board(textEl({ text: '' })))).not.toContain('<tspan')
   })
+
+  it('moves the anchor when textAlign is set, not just left', () => {
+    // Mirrors the sticky note's own alignment test above. `textSvg` reads
+    // `align` for both `textAnchorFor` and `textXFor` — a hardcoded 'left'
+    // (i.e. always `text-anchor="start"`) would still pass every other test
+    // in this describe block, since none of them ever set textAlign.
+    const svg = boardToSvg(board(textEl({ textAlign: 'center' })))
+
+    expect(svg).toContain('text-anchor="middle"')
+  })
 })
 
 describe('boardToJson', () => {

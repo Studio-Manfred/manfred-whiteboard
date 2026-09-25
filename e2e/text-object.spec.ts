@@ -83,6 +83,44 @@ async function openTextColourPanel(page: Page) {
   await expect(page.getByRole('dialog', { name: 'Text colour' })).toBeVisible()
 }
 
+/**
+ * Installs a hook that captures the SVG blob the export path builds before
+ * handing it to the PNG rasteriser — there is no user-facing SVG download,
+ * so this is the only way to read what `boardToSvg` actually produced,
+ * exactly as fill-pattern.spec.ts does for the same reason. Must be called
+ * before `page.goto`, since it works via `addInitScript`.
+ */
+async function captureExportedSvg(page: Page) {
+  await page.addInitScript(() => {
+    const createObjectURL = URL.createObjectURL.bind(URL)
+    URL.createObjectURL = (source: Blob | MediaSource) => {
+      if (source instanceof Blob && source.type === 'image/svg+xml') {
+        ;(window as unknown as { __exportedSvg?: Blob }).__exportedSvg = source
+      }
+      return createObjectURL(source)
+    }
+  })
+}
+
+/** Triggers the PNG export and returns the SVG `captureExportedSvg` caught. */
+async function exportAndReadSvg(page: Page): Promise<string> {
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export' }).click()
+  await page.getByRole('menuitem', { name: /PNG/ }).click()
+  await downloadPromise
+
+  const svg = await page.evaluate(() => {
+    const held = (window as unknown as { __exportedSvg?: Blob }).__exportedSvg
+    return held ? held.text() : null
+  })
+  expect(svg).not.toBeNull()
+  return svg!
+}
+
+function tspanLines(svg: string): string[] {
+  return [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((m) => m[1])
+}
+
 test('creating a text object enters edit mode immediately, and committed text renders as lines', async ({
   page,
 }) => {
@@ -204,20 +242,50 @@ test('the text colour control recolours the text', async ({ page }) => {
   )
 })
 
-test('an export carries the same line breaks as the screen', async ({ page }) => {
-  // There is no user-facing SVG download — `boardToSvg` only ever feeds the
-  // PNG rasteriser (`svgToPngBlob` in src/lib/download.ts). Hooking
-  // `URL.createObjectURL` is the only way to read the SVG the production
-  // build actually produced, exactly as `fill-pattern.spec.ts` does.
-  await page.addInitScript(() => {
-    const createObjectURL = URL.createObjectURL.bind(URL)
-    URL.createObjectURL = (source: Blob | MediaSource) => {
-      if (source instanceof Blob && source.type === 'image/svg+xml') {
-        ;(window as unknown as { __exportedSvg?: Blob }).__exportedSvg = source
-      }
-      return createObjectURL(source)
-    }
-  })
+test('an export carries the same wrapped line breaks as the screen', async ({ page }) => {
+  // The unit-level anti-divergence check (test/board-export.test.ts) compares
+  // layoutText(...) directly against boardToSvg(...) — but boardToSvg's
+  // textSvg calls layoutText itself, so that only proves layoutText agrees
+  // with layoutText, not that the canvas and the export agree. This is the
+  // genuine end-to-end check: real on-screen `text-line` nodes against the
+  // real exported SVG. It only exercises the wrap width — the thing the
+  // anti-divergence guarantee actually promises — when the text is long
+  // enough to genuinely wrap, so this uses the same "many short words" idiom
+  // as the resize test above (`:133`) to force a real wrap at the default
+  // 240px width. (A prior version of this test used only hard newlines,
+  // which split before `wrapParagraph` is ever reached — the wrap width
+  // never mattered, and a canvas laid out 20px narrower than the export
+  // still passed every test in the suite, this one included.)
+  await captureExportedSvg(page)
+
+  await page.goto(`/#room=text-export-wrap-${Date.now()}`)
+  const text = await createText(page)
+  // Not the resize test's "wrap" — at the real Inter metrics this suite
+  // renders with, six-word and seven-word "wrap" lines straddle 250px, so a
+  // 240-vs-220 width difference (the shape of the actual regression) lands on
+  // the same side of the boundary for both and this text cannot tell them
+  // apart. "text" lines up seven words at ~225px and six at ~192px — squarely
+  // between 220 and 240 — so a canvas laid out 20px narrower groups every
+  // line into sixes while the export groups into sevens. Verified by
+  // deliberately mutating the canvas layout width (see this task's report)
+  // and confirming this exact assertion fails.
+  const words = Array(24).fill('text').join(' ')
+  await typeAndCommit(page, text, words)
+
+  const onScreenLines = await text.locator('[data-testid="text-line"]').allTextContents()
+  expect(onScreenLines.length).toBeGreaterThan(1)
+
+  const svg = await exportAndReadSvg(page)
+  expect(tspanLines(svg)).toEqual(onScreenLines)
+})
+
+test('an export carries the same explicit line breaks as the screen', async ({ page }) => {
+  // Kept alongside the wrapped case above rather than replaced by it —
+  // explicit newlines are their own path through layoutText (split before
+  // wrapParagraph runs at all) and deserve their own coverage, even though
+  // this case alone cannot prove the wrap width agrees between the canvas
+  // and the export.
+  await captureExportedSvg(page)
 
   await page.goto(`/#room=text-export-${Date.now()}`)
   const text = await createText(page)
@@ -226,19 +294,8 @@ test('an export carries the same line breaks as the screen', async ({ page }) =>
   const onScreenLines = await text.locator('[data-testid="text-line"]').allTextContents()
   expect(onScreenLines).toEqual(['First line', 'Second line', 'Third line'])
 
-  const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export' }).click()
-  await page.getByRole('menuitem', { name: /PNG/ }).click()
-  await downloadPromise
-
-  const svg = await page.evaluate(() => {
-    const held = (window as unknown as { __exportedSvg?: Blob }).__exportedSvg
-    return held ? held.text() : null
-  })
-
-  expect(svg).not.toBeNull()
-  const tspanTexts = [...svg!.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((m) => m[1])
-  expect(tspanTexts).toEqual(onScreenLines)
+  const svg = await exportAndReadSvg(page)
+  expect(tspanLines(svg)).toEqual(onScreenLines)
 })
 
 test('Escape on a freshly created, never-typed object deletes it', async ({ page }) => {
