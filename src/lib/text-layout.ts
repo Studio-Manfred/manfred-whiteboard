@@ -4,8 +4,12 @@
  * The measuring function is injected rather than reached for, because the two
  * callers need different ones: the browser hands in a real `measureText`, a
  * test hands in something deterministic. Both get the same wrapping from the
- * same code, which is what stops the canvas and the export disagreeing about
+ * same code, which is what stops the canvas and text elements disagreeing about
  * where a line breaks.
+ *
+ * Note: Sticky notes and shape labels still use the older `wrapText` function
+ * in `board-export.ts`. Routing them through this module is out of scope and
+ * pending a separate ticket.
  */
 
 import type { FontFamily } from '../types/whiteboard'
@@ -22,7 +26,11 @@ export interface TextLayout {
 /** Line box as a multiple of the font size. */
 export const LINE_HEIGHT = 1.35
 
-/** The CSS font shorthand `measureText` expects. */
+/**
+ * The CSS font shorthand `measureText` expects.
+ * Format: "{fontSize}px {fontFamily}" — this shape is a contract that
+ * `estimateMeasure` depends on; it parses the size from the start of the string.
+ */
 export function cssFont(fontSize: number, fontFamily?: FontFamily): string {
   return `${fontSize}px ${fontFamilyStack(fontFamily)}`
 }
@@ -34,7 +42,8 @@ function wrapParagraph(
   font: string,
   measure: Measure
 ): string[] {
-  if (paragraph === '') return ['']
+  // Treat empty or whitespace-only paragraphs as empty lines.
+  if (paragraph.trim() === '') return ['']
 
   const lines: string[] = []
   let line = ''
