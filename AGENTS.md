@@ -53,6 +53,51 @@ interactive skill that dialogues with the human (`/brainstorming`,
 `/writing-plans`). Spawning a subagent for a two-line CHANGELOG edit costs
 more than doing it.
 
+### Briefing a dispatched role
+
+A dispatch is only as good as its brief, and a brief written from memory
+repeats the author's mistakes. STU-925 spent 919k tokens across seven
+dispatches; most of the avoidable cost was in the briefs, not the work.
+
+- **One context file per ticket**, `docs/context/STU-NNN.md` — the approved
+  design, the API contract agents code against, and the repo facts the work
+  depends on. Briefs point at it instead of restating it. **Verify each repo
+  fact before writing it down**: two STU-925 briefs asserted things about this
+  repo that were false, and each cost the tester a correction.
+- **Keep a Traps section in that file** and append to it the moment anything
+  bites, so every later brief inherits it. STU-925's most expensive dispatch
+  lost roughly a third of its tool calls to a trap already recorded in
+  `knowledge/ERRORS.md` that nobody put in its brief.
+- **Freeze the contract, then parallelise.** Once the API contract is written
+  down, specs for stage N+1 can be written while stage N is implemented. Only
+  serialise what actually depends on the previous output.
+- **State assumptions as assumptions.** "Verify X; I believe it is Y" invites
+  the correction that asserting Y as fact buries.
+- **Log every dispatch in that file** — role, model, tokens, tool calls, what it
+  produced and what it caught. Tokens and calls come from the completion notice.
+  The "caught" column is the point: it is the only way to learn which roles earn
+  their cost. Note what was worn rather than dispatched too, since wearing a hat
+  does not change the model and dispatching does.
+- **Scan for ownership before Task 1.** List every file the feature will touch and
+  confirm some task names it. STU-953's plan left `board-selectors.ts` unowned; it
+  switches on element type with no `default`, so the new type was silently dropped
+  and three tasks would have passed green with the feature rendering nothing.
+  Typecheck cannot catch this — a missing `default` means no exhaustiveness to fail.
+- **A test guarding a named risk is not a guard until it has been watched to fail.**
+  Make the bug, run the test, restore in the next tool call. Three STU-953 tests were
+  proven unable to fail; all three were covered lines, so coverage said nothing.
+- **Anything touching focus, pointer events, visibility or text measurement gets a
+  real-browser check, by the implementer.** jsdom dispatches no native default
+  actions and does no layout, so it cannot see that class of bug at all. Both of
+  STU-953's worst findings were caught exactly this way.
+- **Check `git status` after every review dispatch.** Reviewers mutate source to test
+  their own findings; one was killed mid-mutation and left the bug in the tree.
+- See `knowledge/subagent-review.md` for the full account.
+- **Do not optimise away mutation-verification.** A tester that proves its
+  assertions bite — by building a throwaway implementation and deliberately
+  breaking it — is the most expensive practice here and the highest-value one.
+  It caught an assertion that would have failed a *correct* implementation.
+
 See `knowledge/roles.md` for the full role definitions.
 
 ## The per-PR rhythm
@@ -74,6 +119,10 @@ See `knowledge/roles.md` for the full role definitions.
 - **Spec locations:** unit and component tests live in the top-level `test/` directory
   (45 files) and import from `src/lib/…`; `src/lib/utils.test.ts` is the lone exception.
   E2E tests live in `e2e/`.
+- **Design-time ugly pass:** before implementing anything visual, ask what it looks
+  like at its worst — text on the densest fill, the smallest element it can be drawn
+  at, the narrowest viewport. Two of STU-925's three visual defects were answerable
+  before a line was written.
 - **The Iron Law:** no production logic without a failing test first.
 - **TDD trigger list:** pure functions/helpers, data transforms, reducers, hooks with
   logic, bug fixes (write the regression test first), API/util modules. Trivial wiring and
