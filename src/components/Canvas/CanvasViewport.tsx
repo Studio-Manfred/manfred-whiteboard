@@ -17,6 +17,7 @@ export type CanvasTool =
   | 'connector'
   | 'pen'
   | 'eraser'
+  | 'text'
 
 interface CanvasViewportProps {
   viewport: Viewport
