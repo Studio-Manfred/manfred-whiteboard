@@ -993,9 +993,45 @@ git commit -m "feat(ui): group the shape tools and add the text tool (STU-953)"
 ### Task 6: Wire the text tool into the board
 
 **Files:**
+- Modify: `src/lib/board-selectors.ts` — **added by Ruling 10, see below**
 - Modify: `src/App.tsx`
 - Modify: `src/lib/tool-shortcuts.ts`
-- Test: `test/App.test.tsx`, `test/tool-shortcuts.test.ts`
+- Test: `test/board-selectors.test.ts`, `test/App.test.tsx`, `test/tool-shortcuts.test.ts`
+
+**Ruling 10 — this task owns `board-selectors.ts`.** The original plan named no
+owner for it, which would have shipped an invisible feature. `BoardLayers`
+declares four typed arrays and `partitionElements` switches over element type
+with **no `default` clause**, so a `TextElement` is silently dropped from every
+render layer — and since there is no `default`, TypeScript exhaustiveness can
+never flag it. `partitionElements` is the sole source of `stackedElements` in
+`App.tsx`, so without this the element renders as nothing at all.
+
+Required here, before the App wiring:
+
+```ts
+// src/lib/board-selectors.ts
+export interface BoardLayers {
+  stickies: StickyElement[]
+  shapes: ShapeElement[]
+  connectors: ConnectorElement[]
+  drawings: DrawingElement[]
+  texts: TextElement[]
+}
+```
+
+with a `case 'text': layers.texts.push(el); break` in `partitionElements`, and
+a failing test first in `test/board-selectors.test.ts`:
+
+```ts
+it('gives text objects a layer of their own', () => {
+  const layers = partitionElements(new Map([[textEl.id, textEl]]))
+  expect(layers.texts).toEqual([textEl])
+})
+```
+
+Also confirm `findElementAt` hit-tests a text element — it shares `containsPoint`
+with the other types, so it should, but it is untested for text and a text object
+that cannot be clicked cannot be selected.
 
 **Interfaces:**
 - Consumes: `createTextElement`, `TEXT_DEFAULT_WIDTH` from Task 2; `TextItem` from Task 3.
