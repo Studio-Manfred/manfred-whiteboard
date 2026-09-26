@@ -328,22 +328,28 @@ So the manual deploy is redundant, not merely flaky: it costs build minutes,
 races the deploy that was already happening, and intermittently fails in a way
 that reads as an auth problem.
 
-**And worse than redundant — the two deploys are not the same build.** Fetched
-both deployment URLs for the same merge commit:
+**The two deploys ARE the same build — an earlier note here claimed otherwise
+and was wrong.** The deployments carry different content-hash filenames, which
+looked like different builds:
 
 ```
-alias        assets/index-BF31pW86.js  assets/index-BtUXSa34.css
-cli          assets/index-BF31pW86.js  assets/index-BtUXSa34.css   <- alias serves this
-integration  assets/index-CBPaAWB5.js  assets/index-BqCdCcap.css   <- different bundle
+cli          assets/index-BF31pW86.js
+integration  assets/index-CBPaAWB5.js
 ```
 
-Same commit, two deployments, **different content hashes**. Vite hashes are
-deterministic for identical input, so the inputs differ — most likely because
-`vercel deploy` uploads the local working directory while the integration
-builds from a clean git checkout. Which of the two serves production is decided
-by a race.
+Fetching both and comparing byte for byte: **identical, 406,826 bytes, zero
+differing characters.** Vite's content-hash input includes path-dependent module
+ids, and a CLI upload builds at a different path than a Git clone — so the same
+output is emitted under two different names.
 
-Cause not yet established; recorded as an observation. Filed as STU-976.
+The earlier claim that "a release can ship something that is not in `main`" was
+not supported by evidence and is withdrawn. A local build of `main` reproduces
+the integration deployment's hashes exactly, and both deployed bundles contain
+the shipped feature.
+
+What remains true: the second deploy is redundant, it races the first for the
+production alias, and the loser reports a misleading `Not authorized`. Filed as
+STU-976.
 
 The original note below is kept as written, because "log it, do not theorise,
 wait for a pattern" worked exactly as intended — the first occurrence genuinely
