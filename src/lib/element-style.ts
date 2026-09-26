@@ -25,7 +25,9 @@ export type StyleProperty =
 
 export type Arrowheads = 'none' | 'start' | 'end' | 'both'
 
-export const FONT_SIZES = [12, 14, 16, 20, 24, 32] as const
+export const FONT_SIZES = [
+  12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64, 80, 96, 128, 200, 320, 500,
+] as const
 export const STROKE_WIDTHS = [1, 2, 4, 8] as const
 
 export const FONT_FAMILIES: ReadonlyArray<{ value: FontFamily; label: string }> = [

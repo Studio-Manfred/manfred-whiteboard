@@ -33,7 +33,7 @@ import {
   patternTile,
   type FillPattern,
 } from '../../lib/fill-patterns'
-import { contextBarPosition } from '../../lib/context-bar'
+import { contextBarPosition, PANEL_ALLOWANCE } from '../../lib/context-bar'
 import { useWindowSize } from '../../hooks/useWindowSize'
 import type { Rect } from '../../lib/marquee'
 import type { Viewport } from '../../lib/coordinates'
@@ -126,7 +126,16 @@ function OptionList({
   onSelect: (value: never) => void
 }) {
   return (
-    <div className="flex flex-col gap-0.5 min-w-[9.5rem]">
+    <div
+      className="flex flex-col gap-0.5 min-w-[9.5rem] overflow-y-auto"
+      // PANEL_ALLOWANCE is how much headroom `contextBarPosition` assumes a
+      // panel needs before it will let the bar open upward
+      // (context-bar.ts:94). Imported, not retyped, so the two cannot drift
+      // apart — a longer option list scrolls instead of running off-screen.
+      // A computed value can't go through `className`: Tailwind only
+      // generates classes from literal strings, not a runtime variable.
+      style={{ maxHeight: `${PANEL_ALLOWANCE}px` }}
+    >
       {options.map((option) => (
         <button
           key={option.value}
