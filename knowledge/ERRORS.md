@@ -326,7 +326,24 @@ misleading `Not authorized`.
 
 So the manual deploy is redundant, not merely flaky: it costs build minutes,
 races the deploy that was already happening, and intermittently fails in a way
-that reads as an auth problem. Filed as STU-976.
+that reads as an auth problem.
+
+**And worse than redundant — the two deploys are not the same build.** Fetched
+both deployment URLs for the same merge commit:
+
+```
+alias        assets/index-BF31pW86.js  assets/index-BtUXSa34.css
+cli          assets/index-BF31pW86.js  assets/index-BtUXSa34.css   <- alias serves this
+integration  assets/index-CBPaAWB5.js  assets/index-BqCdCcap.css   <- different bundle
+```
+
+Same commit, two deployments, **different content hashes**. Vite hashes are
+deterministic for identical input, so the inputs differ — most likely because
+`vercel deploy` uploads the local working directory while the integration
+builds from a clean git checkout. Which of the two serves production is decided
+by a race.
+
+Cause not yet established; recorded as an observation. Filed as STU-976.
 
 The original note below is kept as written, because "log it, do not theorise,
 wait for a pattern" worked exactly as intended — the first occurrence genuinely
