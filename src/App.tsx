@@ -811,6 +811,10 @@ export default function App() {
               onSelect={(e) => handleElementSelect(element.id, e)}
               onUpdate={(patch) => updateTextElement(element, patch)}
               onDragStart={(e) => handleDragStart(element.id, pointerWorld(e), e)}
+              onAnchorDragStart={(anchor, e) => handleAnchorDragStart(element.id, anchor, e)}
+              onAnchorKeyActivate={(anchor) => handleAnchorKeyActivate(element.id, anchor)}
+              showAnchors={showAllAnchors}
+              highlightedAnchor={anchorHighlightFor(element.id)}
               onResizeStart={(handle, e) => handleResizeStart(element.id, handle, e)}
               onResizeByKeyboard={(handle, delta) =>
                 handleResizeByKeyboard(element.id, handle, delta)

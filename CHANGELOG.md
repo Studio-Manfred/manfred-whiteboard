@@ -83,6 +83,11 @@ All notable changes to this project are documented here. The format follows
 - `README.md` (including deployment setup and the single-player caveat) and this
   changelog.
 
+- Text objects are now valid arrow endpoints: the same four edge anchors — top, right,
+  bottom, left — that sticky notes and shapes offer, with drag-to-connect and the
+  keyboard route both wired up. Anchors are hidden while the object is being edited, so
+  they never sit over the textarea (STU-972).
+
 ### Changed
 
 - The toolbar's colour palette has moved to the properties bar, which edits what is
@@ -121,6 +126,11 @@ All notable changes to this project are documented here. The format follows
 - Resize handles were unclickable inside layers that disable pointer events, so resizing a
   freehand stroke did nothing and silently deselected it. The handles now re-enable pointer
   events for themselves.
+
+- Deleting an element left any connector attached to it pointing at nothing — drawn from
+  nowhere to nowhere, unselectable, uncleanable by hand. `removeElements` now takes every
+  connector whose `fromId` or `toId` is in the set being deleted with it, for every
+  element type, in the same undo step as the deletion (STU-862, closed via STU-972).
 
 - Shapes had no shadow at all, so they sat flat while notes floated. Notes and shapes now
   share one elevation model, and a shape's shadow follows its real outline rather than a

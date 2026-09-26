@@ -117,7 +117,7 @@ stay on their own layer.
 
 ## Drawing arrows
 
-Hover a note or shape and four blue dots appear on its edges. Press one and drag: a
+Hover a note, shape or text object and four blue dots appear on its edges. Press one and drag: a
 preview arrow follows the pointer, every element on the board shows its own dots, and
 coming near one snaps the preview to it and marks the target. Release to draw the arrow;
 release anywhere else and nothing is created. Escape abandons it mid-drag. Dropping
