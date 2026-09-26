@@ -191,6 +191,31 @@ describe('the option sets', () => {
   })
 })
 
+/**
+ * STU-975: the ramp grows from 6 sizes to 17, adding 18 and 28 in the middle
+ * of the range (not only at the top) and reaching a new ceiling of 500. Every
+ * size the ramp offered before must survive, or an existing board would
+ * change appearance the moment it loads.
+ */
+describe('the FONT_SIZES ramp (STU-975)', () => {
+  it('is strictly ascending, with no repeated or out-of-order step', () => {
+    for (let i = 1; i < FONT_SIZES.length; i++) {
+      expect(FONT_SIZES[i]).toBeGreaterThan(FONT_SIZES[i - 1])
+    }
+  })
+
+  it('keeps every size the ramp offered before this ticket', () => {
+    const previous = [12, 14, 16, 20, 24, 32]
+    for (const size of previous) {
+      expect(FONT_SIZES).toContain(size)
+    }
+  })
+
+  it('tops out at 500', () => {
+    expect(FONT_SIZES[FONT_SIZES.length - 1]).toBe(500)
+  })
+})
+
 describe('effectiveFontSize', () => {
   it('reports the size actually rendered when none was set', () => {
     // These are the sizes StickyNote and ShapeItem fall back to.

@@ -3,6 +3,8 @@ import { render, screen, fireEvent, cleanup, within } from '@testing-library/rea
 import { PropertiesBar } from '../src/components/UI/PropertiesBar'
 import { FILL_SWATCHES, TEXT_SWATCHES, colorName } from '../src/lib/element-colors'
 import { FILL_PATTERNS, patternLabel, patternTile } from '../src/lib/fill-patterns'
+import { FONT_SIZES, STROKE_WIDTHS, TEXT_ALIGNS } from '../src/lib/element-style'
+import { PANEL_ALLOWANCE } from '../src/lib/context-bar'
 import type { BoardElement, ConnectorElement, ShapeElement, StickyElement, TextElement } from '../src/types/whiteboard'
 
 const note: StickyElement = {
@@ -599,6 +601,58 @@ describe('PropertiesBar', () => {
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       expect(trigger).toHaveFocus()
+    })
+  })
+
+  describe('the option-list panel cap (STU-975)', () => {
+    // contextBarPosition only lets the bar open upward when there is
+    // PANEL_ALLOWANCE of headroom above the selection (context-bar.ts:94).
+    // A 17-item list (the new font-size ramp) runs to roughly 3x that at
+    // ~32px a row, so without a cap it would run off the top of the screen
+    // the moment the bar picked "above". jsdom does no layout, so this only
+    // proves the style is applied — see the throwaway Playwright pass for
+    // proof it actually fits and scrolls at 393px.
+    it('caps the text-size panel at PANEL_ALLOWANCE and lets it scroll', () => {
+      renderBar([note])
+      fireEvent.click(control('Text size')!)
+      const panel = screen.getByRole('dialog', { name: 'Text size' })
+      const list = panel.firstElementChild as HTMLElement
+
+      expect(list.style.maxHeight).toBe(`${PANEL_ALLOWANCE}px`)
+      expect(list.className).toMatch(/overflow-y-auto/)
+    })
+
+    it('agrees with PANEL_ALLOWANCE exactly, so raising one without the other fails loudly', () => {
+      renderBar([note])
+      fireEvent.click(control('Text size')!)
+      const panel = screen.getByRole('dialog', { name: 'Text size' })
+      const list = panel.firstElementChild as HTMLElement
+
+      expect(parseInt(list.style.maxHeight, 10)).toBe(PANEL_ALLOWANCE)
+    })
+
+    it('still renders every size in the full 17-item ramp — the cap scrolls, it does not truncate', () => {
+      renderBar([note])
+      fireEvent.click(control('Text size')!)
+      const panel = screen.getByRole('dialog', { name: 'Text size' })
+
+      expect(within(panel).getAllByRole('button')).toHaveLength(FONT_SIZES.length)
+    })
+
+    it('still renders every option in the short thickness panel', () => {
+      renderBar([arrow])
+      fireEvent.click(control('Thickness')!)
+      const panel = screen.getByRole('dialog', { name: 'Thickness' })
+
+      expect(within(panel).getAllByRole('button')).toHaveLength(STROKE_WIDTHS.length)
+    })
+
+    it('still renders every option in the short alignment panel', () => {
+      renderBar([note])
+      fireEvent.click(control('Text alignment')!)
+      const panel = screen.getByRole('dialog', { name: 'Text alignment' })
+
+      expect(within(panel).getAllByRole('button')).toHaveLength(TEXT_ALIGNS.length)
     })
   })
 })

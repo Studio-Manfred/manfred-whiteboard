@@ -11,6 +11,47 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-26 — STU-975 · more text sizes, up to 500px · shipped (commit pending PR)
+
+- **Shipped:** `FONT_SIZES` (`src/lib/element-style.ts:28`) grows from 6 to 17 sizes,
+  adding 18 and 28 mid-ramp and topping out at 500 — every prior size survives, so no
+  board's appearance changes. The real work: `OptionList` (`PropertiesBar.tsx`, shared by
+  font size, font family, thickness and alignment) had no max-height at all, while
+  `contextBarPosition` (`context-bar.ts:94`) only reserves `PANEL_ALLOWANCE` (160px) of
+  headroom before letting a panel open upward. A 17-item list at the real, measured ~32px
+  row height (34px including the `gap-0.5` between rows) runs to 576px — well past what
+  placement assumed — so it would have opened above and run off the top of the screen.
+  Fixed by giving `OptionList` `style={{ maxHeight: `${PANEL_ALLOWANCE}px` }}` plus
+  `overflow-y-auto`, importing `PANEL_ALLOWANCE` rather than retyping 160, so the two
+  values can't drift apart again. Tests: `test/element-style.test.ts` (ramp strictly
+  ascending, keeps every prior size, tops at 500) and `test/PropertiesBar.test.tsx` (cap
+  applied and equal to `PANEL_ALLOWANCE`, full 17-item list still renders every option
+  under the cap, short lists — thickness, alignment — unaffected). All four are unit-level
+  and jsdom does no layout, so they only prove the style is applied; the real "does it fit
+  and scroll" proof was a throwaway Playwright spec at the Pixel 5's 393px width (deleted
+  before commit, per convention) — it confirmed the capped list's rendered height is
+  exactly 160px, `scrollHeight` (576) exceeds `clientHeight` (160), forcing `scrollTop`
+  actually moves it, and a 500px text object renders without breaking (wraps to one
+  character per line at the default 240px object width — expected, not a bug, since no
+  width that narrow can hold a 500px glyph). All six gates green (unit 750, typecheck,
+  lint, coverage ratchet held with margin, E2E 84).
+- **Decisions:**
+  - Measured the row-height assumption from `docs/context/STU-975.md` rather than trusting
+    it: the ~32px estimate was exactly right (32px per button, 34px row-to-row with the
+    2px gap). Recorded here in case whoever next tunes `PANEL_ALLOWANCE` wants the real
+    number instead of re-deriving it.
+  - Did not export `OptionList` for direct unit testing — tests go through the existing
+    `render(<PropertiesBar .../>)` + `fireEvent.click` + `role="dialog"` pattern the rest of
+    `test/PropertiesBar.test.tsx` already uses, so the panel-cap tests read the same way as
+    every other control in that file.
+  - Out of scope, deliberately untouched: STU-927 (panels clip at the left edge) and
+    STU-974 (the bar covers the top anchor). Both live in the exact files this ticket
+    touched; the browser checks were placed clear of both.
+- **Next pickup:** none — bounded ticket, fully closed. STU-973 (docs-in-same-PR vs. role
+  definition conflict) is filed but not this ticket's to resolve.
+
+---
+
 ## 2026-09-25 — STU-972 · connect arrows to text objects, connector cleanup on delete · shipped
 
 - **Shipped:** text objects are valid arrow endpoints — the same four edge anchors

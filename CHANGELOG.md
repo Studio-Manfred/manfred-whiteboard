@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- More text sizes: the `FONT_SIZES` ramp grows from 6 to 17 steps, adding 18 and 28 in the
+  middle of the range and reaching a new ceiling of 500 (`12, 14, 16, 18, 20, 24, 28, 32,
+  40, 48, 64, 80, 96, 128, 200, 320, 500`). Every size the ramp offered before survives, so
+  no existing board changes appearance. The properties bar's `OptionList` (the shared
+  picker behind font size, font family, thickness and alignment) now caps its height at
+  `PANEL_ALLOWANCE` and scrolls past it — imported from `context-bar.ts`, not retyped, so
+  the two cannot silently drift apart. Before this, a 17-item list had no max-height at all
+  and could run off the top of the screen once `contextBarPosition` chose to open the
+  panel upward (STU-975).
+
 - A briefing convention for dispatched roles: one `docs/context/STU-NNN.md` per ticket
   holding the approved design, the contract agents code against, verified repo facts and
   an append-only Traps section, so a brief points at one reviewed source instead of
