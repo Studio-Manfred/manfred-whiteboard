@@ -137,6 +137,14 @@ After merging:
    The build is deterministic, so identical filenames mean the alias is serving
    this commit. Comparing the alias against a deployment you triggered proves
    only that you triggered it — it passes whatever you deployed.
+
+   **Caveat until the first release under this procedure:** the alias is
+   currently held by a CLI deployment from the old one. Its hashes differ from
+   a local build even though the bundles are byte-identical, because a CLI
+   upload builds at a different path and Vite's hash input includes module
+   ids. So this check reports a mismatch today and becomes meaningful once a
+   merge alone owns the alias. If you need to confirm production now, compare
+   the served bundle byte for byte instead.
 3. Confirm the alias returns 200 and serves the app shell rather than an error
    page.
 
