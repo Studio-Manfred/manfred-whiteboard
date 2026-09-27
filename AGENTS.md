@@ -115,6 +115,43 @@ See `knowledge/roles.md` for the full role definitions.
 8. Wait for CI; iterate on red checks.
 9. Squash-merge when green; the ticket auto-closes; pull `main`.
 
+## Releasing
+
+**Vercel's GitHub integration owns production.** Merging to `main` deploys it.
+**Do not run `vercel deploy --prod`** — it deploys the same commit a second
+time, races the deployment already in flight for the production alias, and the
+loser reports a misleading `Not authorized`. That error appeared in two of
+three releases before the cause was found (STU-976, `knowledge/ERRORS.md`).
+
+After merging:
+
+1. Wait for the integration's production deployment to reach READY
+   (`vercel ls --prod` shows it, or the PR's Vercel check).
+2. **Verify production serves a build of the repository**, not merely a build:
+
+   ```bash
+   npm run build && ls dist/assets/          # hashes for main, locally
+   curl -s https://manfred-whiteboard.vercel.app | grep -o 'assets/index-[^"]*'
+   ```
+
+   The build is deterministic, so identical filenames mean the alias is serving
+   this commit. Comparing the alias against a deployment you triggered proves
+   only that you triggered it — it passes whatever you deployed.
+
+   **Caveat until the first release under this procedure:** the alias is
+   currently held by a CLI deployment from the old one. Its hashes differ from
+   a local build even though the bundles are byte-identical, because a CLI
+   upload builds at a different path and Vite's hash input includes module
+   ids. So this check reports a mismatch today and becomes meaningful once a
+   merge alone owns the alias. If you need to confirm production now, compare
+   the served bundle byte for byte instead.
+3. Confirm the alias returns 200 and serves the app shell rather than an error
+   page.
+
+This app has no API routes, so the root `CLAUDE.md`'s "a protected route
+answers 401, not 500" check does not apply here. Say so rather than inventing a
+route to satisfy the checklist.
+
 ## Testing & TDD
 - **Spec locations:** unit and component tests live in the top-level `test/` directory
   (45 files) and import from `src/lib/…`; `src/lib/utils.test.ts` is the lone exception.

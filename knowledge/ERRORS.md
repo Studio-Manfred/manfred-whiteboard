@@ -305,6 +305,58 @@ on this stack. Kept here so they are found *before* they cost debugging time aga
 the same command succeeded on an immediate retry. Nothing was changed between
 the two attempts — no re-auth, no token refresh, no settings touched.
 
+**CONCLUSION, added 2026-09-26 after a second occurrence.** It recurred on
+STU-975's release, two occurrences in three releases, so the pattern emerged
+and the cause turned out to be ours rather than Vercel's.
+
+`vercel ls --prod` shows **two production deployments per release**, seconds
+apart:
+
+```
+1m   manfred-whiteboard-rim4fzr2y   Ready  Production  14s   <- our CLI deploy
+2m   manfred-whiteboard-o67k5wuk4   Ready  Production   9s   <- the Git integration
+8h   manfred-whiteboard-eenucrm3a   Ready  Production  14s   <- previous release, same pair
+8h   manfred-whiteboard-6tpxcn5lf   Ready  Production  11s
+```
+
+Vercel's GitHub integration already deploys production on merge to `main`. The
+release procedure then runs `vercel deploy --prod` and deploys **the same
+commit a second time**. The two race, and the loser is rejected with a
+misleading `Not authorized`.
+
+So the manual deploy is redundant, not merely flaky: it costs build minutes,
+races the deploy that was already happening, and intermittently fails in a way
+that reads as an auth problem.
+
+**The two deploys ARE the same build — an earlier note here claimed otherwise
+and was wrong.** The deployments carry different content-hash filenames, which
+looked like different builds:
+
+```
+cli          assets/index-BF31pW86.js
+integration  assets/index-CBPaAWB5.js
+```
+
+Fetching both and comparing byte for byte: **identical, 406,826 bytes, zero
+differing characters.** Vite's content-hash input includes path-dependent module
+ids, and a CLI upload builds at a different path than a Git clone — so the same
+output is emitted under two different names.
+
+The earlier claim that "a release can ship something that is not in `main`" was
+not supported by evidence and is withdrawn. A local build of `main` reproduces
+the integration deployment's hashes exactly, and both deployed bundles contain
+the shipped feature.
+
+What remains true: the second deploy is redundant, it races the first for the
+production alias, and the loser reports a misleading `Not authorized`. Filed as
+STU-976.
+
+The original note below is kept as written, because "log it, do not theorise,
+wait for a pattern" worked exactly as intended — the first occurrence genuinely
+was not diagnosable, and the second one handed over the evidence.
+
+---
+
 **Logged without a conclusion.** This is an infrastructure error, and one
 occurrence is not a pattern. If it recurs, the things to check first are
 whether the CLI's cached credentials expire mid-session and whether the
