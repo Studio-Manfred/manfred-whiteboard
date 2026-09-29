@@ -100,6 +100,10 @@ dispatches; most of the avoidable cost was in the briefs, not the work.
 
 See `knowledge/roles.md` for the full role definitions.
 
+### Design System first
+
+**Before designing any new UI:** check `~/Sandbox/Code/manfred-design-system/` for coverage. If the DS lacks the component, file a ticket in the Studio Manfred team's "Design System" Linear project (P-STU-1) and stub locally under `src/components/_ds-stubs/<Name>.tsx` with a `TODO(STU-NNN)` marker. See `knowledge/roles.md` (Designer section) for the full workflow, and `.claude/agents/release-manager.md` for the stub-pickup step on `npm update`.
+
 ## The per-PR rhythm
 1. A Linear ticket exists first (`STU-NNN`, Studio Manfred team, **Manfred Whiteboard**
    project) — file one if needed. The ticket exists before the branch.

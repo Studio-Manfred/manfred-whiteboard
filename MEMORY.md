@@ -166,6 +166,23 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-29 — STU-981 · DS-first convention rolled out · shipped
+
+- **Shipped (branch `feat/STU-981-ds-first-rollout`):** picked up bootstrap
+  STU-977's updates by overwriting `.claude/agents/designer.md`,
+  `.claude/agents/release-manager.md`, and `knowledge/roles.md` with the
+  current `manfred-bootstrap/starter/` versions. Added the "Design System
+  first" callout to `AGENTS.md` under the Roles section. Subagents
+  dispatched with `subagent_type: "designer"` now follow the DS-first
+  workflow-step automatically; `release-manager` greps for `TODO(STU-NNN)`
+  stubs on every `@studio-manfred/*` update.
+- **Decisions:** overwrote the three files verbatim (byte-identical to
+  starter) rather than merging — whiteboard has no local customizations
+  to those role files or the roles.md content.
+- **Next pickup:** the pattern is now live. Any new UI work uses the
+  DS-first check; STU-980 (change-stroke-colour) already exercised it
+  by hand (the ColorPicker stub tracks STU-979 in the DS repo).
+
 ## 2026-09-24 — STU-924 · role-based agents installed · shipped
 
 - **Shipped:** eight named roles installed at `.claude/agents/*.md` (strategist,

@@ -81,6 +81,8 @@ pipeline.
 ### Purpose
 Turn the approved spec into concrete UX users can react to.
 
+**Before starting any UI:** check `~/Sandbox/Code/manfred-design-system/` for coverage. If the DS lacks the component, file a ticket in the Studio Manfred "Design System" Linear project (P-STU-1) and stub locally under `src/components/_ds-stubs/<Name>.tsx` with a `TODO(STU-NNN)` marker. See `.claude/agents/designer.md` for the full 4-part workflow and the ticket template.
+
 ### When to use
 When the spec introduces new UI or reshapes an existing flow.
 
@@ -199,11 +201,13 @@ than Sonnet and fast enough that the human barely notices the round-trip.
 
 ## Release Manager
 
-**Model:** Sonnet · **Owns:** Merge, deploy, prod smoke, rollback.
+**Model:** Sonnet · **Owns:** Merge, deploy, prod smoke, rollback, DS-stub pickup.
 **Superpowers hook:** `/finishing-a-development-branch` steps 1–3 & 7.
 
 ### Purpose
 Get merged work safely into production and back out if it goes wrong.
+
+**On every `npm update @studio-manfred/*`:** grep for `TODO(STU-NNN)` markers left by the Designer role's DS-first workflow. If a marker's ticket is Done, open a follow-up PR to swap the stub for the real DS export. See `.claude/agents/release-manager.md` for the full pickup step.
 
 ### When to use
 Every PR after approval + green CI.

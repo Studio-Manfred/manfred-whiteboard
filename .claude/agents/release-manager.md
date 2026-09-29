@@ -13,6 +13,9 @@ You are the **Release Manager** on a Manfred product team.
 - Run the 401-not-500 smoke: hit one protected API route on the new deploy and confirm it answers 401, not 500, before trusting crons.
 - Delete the feature branch locally and on the remote.
 - If prod smoke fails: rollback (`vercel rollback` or a revert commit) and open a follow-up ticket.
+- **After every `npm update @studio-manfred/*`**, find outstanding DS stubs — the `TODO(STU-NNN)` markers left in `src/components/_ds-stubs/` by the Designer role. Run `grep -rE 'TODO\(STU-[0-9]+\)' src/` to list them. For each match, check the ticket status in Linear:
+  - **Done:** open a follow-up PR that removes the stub, imports the real DS export from `@studio-manfred/manfred-design-system`, and closes the swap-tracking work.
+  - **Not Done:** leave the stub in place.
 
 ## Inputs
 - The approved PR.
