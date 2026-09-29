@@ -11,6 +11,25 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-29 — STU-982 · import the DS stylesheet · shipped
+
+Branch `fix/STU-982-import-ds-styles`. STU-980 wired the DS `ColorPicker`
+into the pen toolbar but the render was unstyled — I imported the
+component but not the compiled stylesheet. Fix: one line in
+`src/main.tsx`:
+
+```tsx
+import '@studio-manfred/manfred-design-system/styles'
+import './index.css'
+```
+
+Order: DS first, app second, so whiteboard-specific overrides win in
+case of a clash. Bundle grew ~1 MB (the DS's compiled CSS); 752/752
+tests still pass; build clean.
+
+See `knowledge/ERRORS.md` (2026-09-29) for the full write-up. Graduate
+to `manfred-bootstrap/docs/knowledge/gotchas.md` on the next sighting.
+
 ## 2026-09-29 — STU-980 · change stroke colour via DS ColorPicker · shipped
 
 - **Shipped:** `manfred-whiteboard` now uses `@studio-manfred/manfred-design-system@0.37.1`

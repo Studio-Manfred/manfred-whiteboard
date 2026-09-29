@@ -20,6 +20,52 @@ Format:
 
 ---
 
+## 2026-09-29 — DS component imported but rendered unstyled (missing stylesheet import)
+
+- **Symptom:** `ColorPicker` imported from `@studio-manfred/manfred-design-system`
+  (STU-980, PR #23) rendered as bare markup — no Tailwind classes, no
+  tokens, no focus rings. Looked nothing like the DS's Storybook.
+- **Cause:** whiteboard imports the component from the DS but never
+  imports the DS's compiled stylesheet. The DS ships styles at
+  `./dist/style.css`, exposed via the `./styles` subpath in
+  `package.json`:
+
+  ```json
+  "exports": {
+    ".": { ... },
+    "./styles": "./dist/style.css",
+    "./tokens.css": "./dist/tokens.css",
+    ...
+  }
+  ```
+
+  `src/main.tsx` only imported `./index.css` (Tailwind + a tiny base
+  layer). The DS's compiled classes and CSS custom properties
+  (`--shadow-focus`, tokens, etc.) were absent at runtime.
+- **Fix / conclusion (STU-982):** add one line to `src/main.tsx`, before
+  `./index.css`, so app-level rules win in case of a clash:
+
+  ```tsx
+  import '@studio-manfred/manfred-design-system/styles'
+  import './index.css'
+  ```
+
+  Bundle grew ~1 MB (DS style.css). Sourcemaps + all 752 tests still
+  pass. `PropertiesBar`'s existing UI is unaffected — it's built with
+  the app's own Tailwind classes, not DS components.
+
+  Broader lesson for future DS imports: **installing the DS package and
+  importing a component is not enough — you also need
+  `import '@studio-manfred/manfred-design-system/styles'` at your
+  entry.** Consider making this the first thing the STU-977 designer
+  role reminds you about when importing from `@studio-manfred/*`.
+- **Graduated to:** local for now. Same trap will bite any Manfred
+  consumer that adds its first DS component; graduate to
+  `manfred-bootstrap/docs/knowledge/gotchas.md` on the second sighting
+  (which is likely to be soon — file it eagerly if it looks structural).
+
+---
+
 ## 2026-09-24 — pattern phase differed between canvas and export
 
 - **Symptom:** a checkerboard fill appeared in one phase on screen and a different phase
