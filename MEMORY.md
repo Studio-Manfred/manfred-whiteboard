@@ -30,6 +30,50 @@ tests still pass; build clean.
 See `knowledge/ERRORS.md` (2026-09-29) for the full write-up. Graduate
 to `manfred-bootstrap/docs/knowledge/gotchas.md` on the next sighting.
 
+## 2026-09-29 — DS-first end-to-end proven · reflection
+
+The DS-first pattern (bootstrap STU-977) had its first live end-to-end
+run today. Whiteboard was both the origin (feature that surfaced the DS
+gap) and the destination (the swap + integration). Full timeline:
+
+1. STU-980 filed: change stroke colour from the canvas toolbar.
+2. Consumer designer's DS-first check: `ls DS/src/components/` — no
+   ColorPicker.
+3. Filed STU-979 in the DS Linear project using the ticket template.
+4. Local stub landed on `feat/STU-980-change-stroke-colour` under
+   `src/components/_ds-stubs/ColorPicker.tsx` with `TODO(STU-979)`.
+5. `ds-designer` (Opus, dispatched from bootstrap via the `claude`
+   fallback because cross-repo subagent registration isn't a thing — see
+   knowledge/ERRORS.md and manfred-bootstrap/docs/knowledge/procedural.md)
+   built ColorPicker in the DS. Two documented API deviations from our
+   sketch: no `variant` prop (compose with Popover instead), and Enter
+   doesn't select (WAI-ARIA `radiogroup` uses Space).
+6. DS shipped v0.37.1 (v0.37.0 tripped a top-level-export postbuild
+   check — see DS knowledge/ERRORS.md).
+7. `release-manager`'s grep pattern (`grep -rE 'TODO\(STU-[0-9]+\)' src/`)
+   found the stub → status Done → retire.
+8. Real DS import wired into the pen toolbar; `strokeColor` state threads
+   through `DrawingLayer` (live preview) and `createDrawingElement`
+   (committed strokes).
+
+**Live-fire lessons captured (see knowledge/ERRORS.md, graduated to
+manfred-bootstrap where cross-repo):**
+
+- `"^0.22.0"` on the DS dep is `<0.23.0`, not `<1.0.0`. Explicit bump
+  needed per DS release.
+
+**Ledgered rulings (whiteboard side):**
+
+- Pen options bar rendered as its own floating control rather than folded
+  into the roving-tabindex Toolbar — keeps keyboard-navigation contract
+  intact.
+
+**Follow-ups worth filing:**
+
+- Playwright coverage of the pen-options bar (axe + click-through)
+- `allowCustom` hex on the pen ColorPicker for power users
+- (When STU-923 lands and role files consolidate, revisit the
+  ds-designer cross-repo dispatch workaround here.)
 ## 2026-09-29 — STU-980 · change stroke colour via DS ColorPicker · shipped
 
 - **Shipped:** `manfred-whiteboard` now uses `@studio-manfred/manfred-design-system@0.37.1`

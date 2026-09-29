@@ -66,6 +66,44 @@ Format:
 
 ---
 
+## 2026-09-29 — `npm update` didn't pick up the new DS version
+
+- **Symptom:** `npm update @studio-manfred/manfred-design-system` claimed
+  success but the installed version stayed at 0.22.x even though DS had
+  released 0.37.1 with the ColorPicker we needed (STU-980 stub swap).
+  Attempting `npm install` explicitly failed:
+
+  ```
+  npm error code ETARGET
+  npm error notarget No matching version found for
+    @studio-manfred/manfred-design-system@^0.37.0.
+  ```
+
+- **Cause:** `"^0.22.0"` in `package.json` resolves to `>=0.22.0 <0.23.0`
+  (not `<1.0.0` — npm's `^` treats major-0 versions specially, pinning the
+  minor). `npm update` respects the range and refuses to jump to 0.37.x.
+  The explicit-install error was a separate problem: the target version
+  wasn't yet published; retrying after the DS release actually landed
+  succeeded.
+
+- **Fix / conclusion:** whenever the DS ships a new minor, bump the range
+  explicitly in `package.json` — `"^0.22.0"` → `"^0.37.1"` — then
+  `npm install`. Don't rely on `npm update` alone. The `release-manager`
+  role's stub-pickup step (STU-977) is the natural moment: you're already
+  editing the dep to unblock a `TODO(STU-NNN)` swap.
+
+  Verified today: after PR #99 published DS 0.37.1, an explicit
+  `"^0.22.0"` → `"^0.37.1"` bump + `npm install` picked up
+  `node_modules/@studio-manfred/manfred-design-system/package.json` at
+  0.37.1.
+
+- **Graduated to:**
+  [manfred-bootstrap/docs/knowledge/gotchas.md](../../manfred-bootstrap/docs/knowledge/gotchas.md)
+  as `^0.x.y` on 0-major dependencies is a MINOR range, not a MAJOR range
+  (2026-09-29, seeded from this sighting).
+
+---
+
 ## 2026-09-24 — pattern phase differed between canvas and export
 
 - **Symptom:** a checkerboard fill appeared in one phase on screen and a different phase
