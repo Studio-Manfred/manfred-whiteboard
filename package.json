@@ -21,7 +21,7 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@studio-manfred/manfred-design-system": "^0.22.0",
+    "@studio-manfred/manfred-design-system": "^0.37.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "perfect-freehand": "^1.2.3",

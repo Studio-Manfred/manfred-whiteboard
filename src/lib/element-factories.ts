@@ -116,7 +116,7 @@ export function strokeBounds(points: readonly Point[]): {
 /** A committed freehand stroke, sized to its own bounds. */
 export function createDrawingElement(
   points: readonly InkPoint[],
-  options: FactoryOptions
+  options: FactoryOptions & { strokeColor?: string }
 ): DrawingElement {
   return {
     ...base(options),
@@ -124,7 +124,7 @@ export function createDrawingElement(
     type: 'drawing',
     // Pressure is kept only where a device reported one.
     points: points.map((p) => ({ x: p.x, y: p.y, ...(p.p === undefined ? {} : { p: p.p }) })),
-    strokeColor: DEFAULT_STROKE,
+    strokeColor: options.strokeColor ?? DEFAULT_STROKE,
     strokeWidth: 3,
     ink: 'pen',
   }

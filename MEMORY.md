@@ -11,6 +11,56 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
+## 2026-09-29 — STU-980 · change stroke colour via DS ColorPicker · shipped
+
+- **Shipped:** `manfred-whiteboard` now uses `@studio-manfred/manfred-design-system@0.37.1`
+  and imports `ColorPicker` from it. A pen-options bar appears above the
+  main Toolbar when `activeTool === 'pen'`, wired to a new `strokeColor`
+  state in `App.tsx`. The picked colour flows through both `DrawingLayer`
+  (live preview) and `createDrawingElement` (committed strokes) via a
+  new optional `strokeColor` field on `FactoryOptions`. DS dep bumped
+  `^0.22.0` → `^0.37.1`.
+- **Tests:** new `src/lib/element-factories.test.ts` with two Vitest
+  assertions (default strokeColor + override via options). RED → GREEN
+  followed the Iron Law. Full suite: 752/752 pass; lint clean; typecheck
+  clean.
+- **Decisions:** ColorPicker rendered in its own floating bar rather
+  than folded into the roving-tabindex Toolbar — keeps the tool
+  switcher's keyboard-navigation contract intact. Default palette from
+  the DS is fine for now; adding `allowCustom` is a follow-up (users
+  who want arbitrary hex can be handled later).
+
+## 2026-09-29 — STU-979 · DS-first loop closed on whiteboard side · shipped
+
+- **Shipped (branch `feat/STU-980-change-stroke-colour`):** the DS-first
+  loop closed for `ColorPicker`. `ds-designer` (Opus subagent) built the
+  component in `manfred-design-system` — API design + 25 Vitest
+  assertions + 6 Storybook stories + play-tiers registration — in a
+  single dispatch. Two deliberate API deviations from the consumer sketch
+  (no `variant` prop; Enter does not select — Radix follows WAI-ARIA
+  radiogroup spec) documented back to STU-979.
+- **Swap step:** deleted `src/components/_ds-stubs/ColorPicker.tsx` on
+  this branch. The `_ds-stubs/` directory is now empty (removed with
+  the file). Consumer code will `import { ColorPicker } from
+  '@studio-manfred/manfred-design-system'` once the DS ships a release
+  containing ColorPicker (package.json dep is `^0.22.0` — will pick up
+  the new version on `npm update`).
+- **What proved the pattern end-to-end:**
+  - Consumer designer's DS-first check (`ls DS/src/components/`) →
+    no ColorPicker → filed STU-979 with the template.
+  - Stub with `TODO(STU-979)` marker → visible to `grep -rE
+    'TODO\(STU-[0-9]+\)' src/` (the release-manager pickup step).
+  - `ds-designer` subagent picked up STU-979 → returned structured
+    report with deviations → orchestrator committed.
+- **Not done on this branch:** the actual feature (integrating
+  ColorPicker into the canvas toolbar and threading the picked colour
+  through the stroke-creation path). That's fresh work — a new branch
+  off main once DS publishes the release with ColorPicker.
+- **Next pickup:** wait for DS PR #96 (STU-979) to merge and a DS
+  release to publish. Then a new branch on whiteboard imports
+  ColorPicker from DS and integrates it into the toolbar to finish the
+  STU-980 acceptance criteria.
+
 ## 2026-09-26 — STU-975 · more text sizes, up to 500px · shipped (commit pending PR)
 
 - **Shipped:** `FONT_SIZES` (`src/lib/element-style.ts:28`) grows from 6 to 17 sizes,
