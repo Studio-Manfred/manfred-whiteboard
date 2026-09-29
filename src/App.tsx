@@ -6,6 +6,7 @@ import { ShapeItem } from './components/Canvas/ShapeItem'
 import { TextItem } from './components/Canvas/TextItem'
 import { ConnectorLayer } from './components/Canvas/ConnectorLayer'
 import { DrawingLayer } from './components/Canvas/DrawingLayer'
+import { ColorPicker } from '@studio-manfred/manfred-design-system'
 import { DrawingItem } from './components/Canvas/DrawingItem'
 import { MultiplayerCursors } from './components/Canvas/MultiplayerCursors'
 import { SelectionOverlay } from './components/Canvas/SelectionOverlay'
@@ -64,6 +65,7 @@ export default function App() {
 
   // Drawing state
   const [drawingPoints, setDrawingPoints] = useState<InkPoint[]>([])
+  const [strokeColor, setStrokeColor] = useState<string>('#0f172a')
   const isDrawing = useRef(false)
 
   /** An arrow being dragged out of an anchor. */
@@ -390,7 +392,7 @@ export default function App() {
       if (activeTool === 'pen' && isDrawing.current) {
         isDrawing.current = false
         if (drawingPoints.length > 2) {
-          createElement(createDrawingElement(drawingPoints, { zIndex: elements.size + 1 }))
+          createElement(createDrawingElement(drawingPoints, { zIndex: elements.size + 1, strokeColor }))
         }
         setDrawingPoints([])
         return
@@ -427,7 +429,7 @@ export default function App() {
       // Finish drag
       dragState.current = null
     },
-    [activeTool, drawingPoints, elements, createElement, marquee, connectorDrag, draggingIds]
+    [activeTool, drawingPoints, elements, createElement, marquee, connectorDrag, draggingIds, strokeColor]
   )
 
   // ----------- Element event handlers -----------
@@ -758,7 +760,7 @@ export default function App() {
         onCanvasPointerUp={handleCanvasPointerUp}
       >
         {/* The stroke currently being drawn; committed ones are in the stack */}
-        <DrawingLayer activePoints={drawingPoints} activeColor="#0f172a" activeWidth={3} />
+        <DrawingLayer activePoints={drawingPoints} activeColor={strokeColor} activeWidth={3} />
 
         {/* Connector layer */}
         <ConnectorLayer
@@ -852,6 +854,20 @@ export default function App() {
       </CanvasViewport>
 
       <Toolbar activeTool={activeTool} onToolChange={setActiveTool} />
+
+      {activeTool === 'pen' && (
+        // Pen options: pick the colour new strokes are drawn in. ColorPicker
+        // comes from the design system (STU-979); the local _ds-stubs/
+        // placeholder was retired once the DS release landed.
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl shadow-slate-900/10">
+          <ColorPicker
+            value={strokeColor}
+            onChange={setStrokeColor}
+            label="Stroke colour"
+            size="sm"
+          />
+        </div>
+      )}
 
       {showPropertiesBar && selectionBox && (
         <PropertiesBar

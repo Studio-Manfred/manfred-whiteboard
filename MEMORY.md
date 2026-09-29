@@ -11,7 +11,26 @@ half-done, and the next pickup point. Convert relative dates to absolute.
 
 ---
 
-## 2026-09-29 — STU-979 · DS-first loop closed on whiteboard side · in progress
+## 2026-09-29 — STU-980 · change stroke colour via DS ColorPicker · shipped
+
+- **Shipped:** `manfred-whiteboard` now uses `@studio-manfred/manfred-design-system@0.37.1`
+  and imports `ColorPicker` from it. A pen-options bar appears above the
+  main Toolbar when `activeTool === 'pen'`, wired to a new `strokeColor`
+  state in `App.tsx`. The picked colour flows through both `DrawingLayer`
+  (live preview) and `createDrawingElement` (committed strokes) via a
+  new optional `strokeColor` field on `FactoryOptions`. DS dep bumped
+  `^0.22.0` → `^0.37.1`.
+- **Tests:** new `src/lib/element-factories.test.ts` with two Vitest
+  assertions (default strokeColor + override via options). RED → GREEN
+  followed the Iron Law. Full suite: 752/752 pass; lint clean; typecheck
+  clean.
+- **Decisions:** ColorPicker rendered in its own floating bar rather
+  than folded into the roving-tabindex Toolbar — keeps the tool
+  switcher's keyboard-navigation contract intact. Default palette from
+  the DS is fine for now; adding `allowCustom` is a follow-up (users
+  who want arbitrary hex can be handled later).
+
+## 2026-09-29 — STU-979 · DS-first loop closed on whiteboard side · shipped
 
 - **Shipped (branch `feat/STU-980-change-stroke-colour`):** the DS-first
   loop closed for `ColorPicker`. `ds-designer` (Opus subagent) built the
