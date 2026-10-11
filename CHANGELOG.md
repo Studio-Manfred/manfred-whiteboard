@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- 2026-10-11 — Production address is now https://whiteboard.studiomanfred.com (old vercel.app address still works).
+
 ### Added
 
 - More text sizes: the `FONT_SIZES` ramp grows from 6 to 17 steps, adding 18 and 28 in the

@@ -135,7 +135,7 @@ After merging:
 
    ```bash
    npm run build && ls dist/assets/          # hashes for main, locally
-   curl -s https://manfred-whiteboard.vercel.app | grep -o 'assets/index-[^"]*'
+   curl -s https://whiteboard.studiomanfred.com | grep -o 'assets/index-[^"]*'
    ```
 
    The build is deterministic, so identical filenames mean the alias is serving
