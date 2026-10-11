@@ -30,7 +30,7 @@ base at `my-process/docs/knowledge/`.
 - Linear project **Manfred Whiteboard** (team `STU`) —
   https://linear.app/studio-manfred/project/manfred-whiteboard-a2565bc4d491
 - Repo: https://github.com/Studio-Manfred/manfred-whiteboard · Production:
-  https://manfred-whiteboard.vercel.app
+  https://whiteboard.studiomanfred.com
 
 ### Plans & Specs
 <!-- Decomposition plans for larger pieces of work. -->
